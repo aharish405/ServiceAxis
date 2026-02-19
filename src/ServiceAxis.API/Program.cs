@@ -123,6 +123,12 @@ try
             await SecuritySeeder.SeedAsync(db, roleManager);
             await MetadataSeeder.SeedAsync(db);
             await LifecycleSeeder.SeedAsync(db);
+            logger.LogInformation("Seeding SLA definitions...");
+            using (var slaScope = app.Services.CreateScope())
+            {
+                var slaDb = slaScope.ServiceProvider.GetRequiredService<ServiceAxisDbContext>();
+                await new SlaSeeder(slaDb).SeedAsync(CancellationToken.None);
+            }
             logger.LogInformation("Database ready.");
         }
         catch (Exception ex)

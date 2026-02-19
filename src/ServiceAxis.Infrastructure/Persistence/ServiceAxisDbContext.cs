@@ -68,9 +68,13 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
     public DbSet<RecordAssignment>      RecordAssignments       => Set<RecordAssignment>();
 
     // ─── SLA ───
-    public DbSet<SlaDefinition> SlaDefinitions => Set<SlaDefinition>();
-    public DbSet<SlaPolicy> SlaPolicies => Set<SlaPolicy>();
-    public DbSet<SlaInstance> SlaInstances => Set<SlaInstance>();
+    public DbSet<SlaDefinition>      SlaDefinitions     => Set<SlaDefinition>();
+    public DbSet<SlaPolicy>          SlaPolicies        => Set<SlaPolicy>();
+    public DbSet<SlaInstance>        SlaInstances       => Set<SlaInstance>();
+    public DbSet<SlaTarget>          SlaTargets         => Set<SlaTarget>();
+    public DbSet<SlaEscalationRule>  SlaEscalationRules => Set<SlaEscalationRule>();
+    public DbSet<BusinessCalendar>   BusinessCalendars  => Set<BusinessCalendar>();
+    public DbSet<SlaTimerEvent>      SlaTimerEvents     => Set<SlaTimerEvent>();
 
     // ── Workflow entities ─────────────────────────────────────────────────
     public DbSet<WorkflowDefinition> WorkflowDefinitions => Set<WorkflowDefinition>();
@@ -272,6 +276,57 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
             .WithMany()
             .HasForeignKey(a => a.RecordId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // ─── SLA Engine Configuration ───
+        builder.Entity<SlaDefinition>().ToTable("SlaDefinitions", "platform");
+        builder.Entity<SlaTarget>().ToTable("SlaTargets", "platform");
+        builder.Entity<SlaPolicy>().ToTable("SlaPolicies", "platform");
+        builder.Entity<SlaInstance>().ToTable("SlaInstances", "platform");
+        builder.Entity<SlaTimerEvent>().ToTable("SlaTimerEvents", "platform");
+        builder.Entity<SlaEscalationRule>().ToTable("SlaEscalationRules", "platform");
+        builder.Entity<BusinessCalendar>().ToTable("BusinessCalendars", "platform");
+
+        builder.Entity<SlaInstance>()
+            .HasIndex(s => s.RecordId);
+        
+        builder.Entity<SlaInstance>()
+            .HasIndex(s => new { s.IsBreached, s.Status }); // For monitoring job
+
+        builder.Entity<SlaInstance>()
+            .HasIndex(s => s.TargetTime); // For identifying nearing breaches
+
+        builder.Entity<SlaInstance>()
+            .HasIndex(s => s.IsPaused);
+
+        // Explicit relationships
+        builder.Entity<SlaTarget>()
+            .HasOne(t => t.SlaDefinition)
+            .WithMany(d => d.Targets)
+            .HasForeignKey(t => t.SlaDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade); // Def deletion removes targets
+
+        builder.Entity<SlaPolicy>()
+            .HasOne(p => p.SlaDefinition)
+            .WithMany(d => d.Policies)
+            .HasForeignKey(p => p.SlaDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<SlaEscalationRule>()
+            .HasOne(r => r.SlaDefinition)
+            .WithMany(d => d.EscalationRules)
+            .HasForeignKey(r => r.SlaDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<SlaTimerEvent>()
+            .HasOne<SlaInstance>()
+            .WithMany(i => i.TimerEvents)
+            .HasForeignKey(e => e.SlaInstanceId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // SLA Tenant filters
+        builder.Entity<SlaDefinition>().HasQueryFilter(x => x.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
+        builder.Entity<SlaInstance>().HasQueryFilter(x => x.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
+        builder.Entity<BusinessCalendar>().HasQueryFilter(x => x.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
 
 
 

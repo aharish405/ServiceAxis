@@ -29,9 +29,9 @@ public static class RecurringJobRegistrations
 
         // ─── SLA Engine ────────────────────────────────────────────────────────
         RecurringJob.AddOrUpdate<SlaEvaluationJob>(
-            "sla-evaluation",
+            "sla-monitor-job",
             job => job.ExecuteAsync(),
-            "*/5 * * * *");   // Every 5 minutes
+            Cron.Minutely);
 
         // ─── Notifications ─────────────────────────────────────────────────────
         RecurringJob.AddOrUpdate<NotificationDispatchJob>(

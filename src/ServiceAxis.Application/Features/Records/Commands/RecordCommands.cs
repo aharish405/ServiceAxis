@@ -130,56 +130,49 @@ public class CreateRecordHandler : IRequestHandler<CreateRecordCommand, RecordRe
         };
 
         // 5. Unit of Work / Transaction
-        await _uow.BeginTransactionAsync(ct);
-        try
+        // Note: Manual transaction removed because EnableRetryOnFailure is enabled. 
+        // EF Core SaveChangesAsync wraps implicit transaction.
+        
+        await _records.AddAsync(record, ct);
+        
+        // Persist EAV values
+        var fieldMap = table.Fields.ToDictionary(f => f.FieldName, f => f);
+        foreach (var (key, val) in cmd.FieldValues)
         {
-            await _records.AddAsync(record, ct);
-            
-            // Persist EAV values
-            var fieldMap = table.Fields.ToDictionary(f => f.FieldName, f => f);
-            foreach (var (key, val) in cmd.FieldValues)
-            {
-                if (!fieldMap.TryGetValue(key, out var fd)) continue;
-                await _values.UpsertValueAsync(record.Id, fd.Id, val, ct);
-            }
-
-            // Platform Activity
-            await _activity.LogActivityAsync(
-                table.Id, 
-                record.Id, 
-                ActivityType.RecordCreated, 
-                $"Record {record.RecordNumber} created.",
-                isSystem: true,
-                ct: ct);
-
-            // Legacy Audit (optional, but kept for compatibility with existing queries)
-            await _uow.Repository<RecordAudit>().AddAsync(new RecordAudit
-            {
-                RecordId = record.Id,
-                Action = "Create",
-                FieldName = "system",
-                NewValue = "Record created",
-                CreatedAt = DateTime.UtcNow
-            }, ct);
-
-
-            // Workflow Triggers
-            await _workflow.ProcessTriggersAsync(table.Id, record.Id, WorkflowTriggerEvent.RecordCreated, null, ct);
-
-            // Lifecycle Initialisation
-            await _stateMachine.InitialiseStateAsync(record.Id, table.Id, ct);
-
-            await _uow.SaveChangesAsync(ct);
-            await _uow.CommitTransactionAsync(ct);
+            if (!fieldMap.TryGetValue(key, out var fd)) continue;
+            await _values.UpsertValueAsync(record.Id, fd.Id, val, ct);
         }
-        catch
+
+        // Platform Activity
+        await _activity.LogActivityAsync(
+            table.Id, 
+            record.Id, 
+            ActivityType.RecordCreated, 
+            $"Record {record.RecordNumber} created.",
+            isSystem: true,
+            ct: ct);
+
+        // Legacy Audit (optional, but kept for compatibility with existing queries)
+        await _uow.Repository<RecordAudit>().AddAsync(new RecordAudit
         {
-            await _uow.RollbackTransactionAsync(ct);
-            throw;
-        }
+            RecordId = record.Id,
+            Action = "Create",
+            FieldName = "system",
+            NewValue = "Record created",
+            CreatedAt = DateTime.UtcNow
+        }, ct);
+
+
+        // Workflow Triggers
+        await _workflow.ProcessTriggersAsync(table.Id, record.Id, WorkflowTriggerEvent.RecordCreated, null, ct);
+
+        // Lifecycle Initialisation
+        await _stateMachine.InitialiseStateAsync(record.Id, table.Id, ct);
+
+        await _uow.SaveChangesAsync(ct);
 
         // 6. Post-persistence logic
-        await _sla.StartSlaAsync(record.Id, table.Name, priority, ct);
+        await _sla.StartSlaAsync(record.Id, table.Name, priority, record.TenantId, ct);
 
         if (string.IsNullOrEmpty(cmd.FieldValues.GetValueOrDefault("assigned_to")))
         {

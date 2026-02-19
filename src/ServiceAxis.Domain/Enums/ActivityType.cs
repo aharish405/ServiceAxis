@@ -10,5 +10,11 @@ public enum ActivityType
     WorkflowEvent,
     StatusChanged,
     AssignmentChanged,
-    StateTransitioned
+    StateTransitioned,
+    SlaStarted,
+    SlaPaused,
+    SlaResumed,
+    SlaCompleted,
+    SlaBreached,
+    SlaEscalated
 }

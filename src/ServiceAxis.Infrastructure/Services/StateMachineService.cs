@@ -131,7 +131,7 @@ public class StateMachineService : IStateMachineService
             ActivityType.StateTransitioned,
             $"State changed: '{fromDisplayName}' → '{transition.ToState.DisplayName}'",
             isSystem: false,
-            changes: new[] { ("state", (Guid?)null, fromDisplayName, transition.ToState.DisplayName) },
+            changes: new[] { ("state", (Guid?)null, (string?)fromDisplayName, (string?)transition.ToState.DisplayName) },
             ct: ct);
 
         await _db.SaveChangesAsync(ct);

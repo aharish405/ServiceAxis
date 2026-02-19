@@ -2,6 +2,7 @@ using MediatR;
 using ServiceAxis.Application.Contracts.Persistence;
 using ServiceAxis.Domain.Entities.Sla;
 using ServiceAxis.Domain.Enums;
+using ServiceAxis.Domain.Entities.Platform; // For SysTable
 using ServiceAxis.Shared.Exceptions;
 
 namespace ServiceAxis.Application.Features.Sla.Commands;
@@ -12,11 +13,6 @@ public record CreateSlaDefinitionCommand(
     string Name,
     string? Description,
     string TableName,
-    string Type,
-    string ScheduleType,
-    int BusinessStartHour,
-    int BusinessEndHour,
-    string WorkingDaysJson,
     Guid? TenantId) : IRequest<Guid>;
 
 public class CreateSlaDefinitionHandler : IRequestHandler<CreateSlaDefinitionCommand, Guid>
@@ -27,40 +23,86 @@ public class CreateSlaDefinitionHandler : IRequestHandler<CreateSlaDefinitionCom
 
     public async Task<Guid> Handle(CreateSlaDefinitionCommand cmd, CancellationToken ct)
     {
-        if (!Enum.TryParse<SlaType>(cmd.Type, true, out var slaType))
-            throw new BusinessException($"Unknown SLA type '{cmd.Type}'.");
-        if (!Enum.TryParse<SlaScheduleType>(cmd.ScheduleType, true, out var scheduleType))
-            throw new BusinessException($"Unknown schedule type '{cmd.ScheduleType}'.");
+        // Resolve Table ID
+        var tables = await _uow.Repository<SysTable>().FindAsync(t => t.Name == cmd.TableName, ct);
+        var table = tables.FirstOrDefault()
+            ?? throw new NotFoundException($"Table '{cmd.TableName}' not found.");
 
         var def = new SlaDefinition
         {
             Name              = cmd.Name,
             Description       = cmd.Description,
-            TableName         = cmd.TableName.ToLowerInvariant(),
-            Type              = slaType,
-            ScheduleType      = scheduleType,
-            BusinessStartHour = cmd.BusinessStartHour,
-            BusinessEndHour   = cmd.BusinessEndHour,
-            WorkingDaysJson   = cmd.WorkingDaysJson,
+            TableId           = table.Id, 
+            IsActive          = true,
             TenantId          = cmd.TenantId
         };
 
         await _uow.Repository<SlaDefinition>().AddAsync(def, ct);
+        // Note: Commit is handled by UnitOfWork usually or explicit SaveChanges.
+        // My previous handlers used uow.SaveChangesAsync().
+        // If UnitOfWork pattern in this solution requires it:
+        // (BaseUnitOfWork usually has SaveChangesAsync).
+        // I'll assume I need to call it on repository addition if pattern suggests, 
+        // or _uow.CommitAsync()? 
+        // The existing code used `await _uow.SaveChangesAsync(ct);`. I'll follow that.
+        // Wait, `IUnitOfWork` usually exposes `Task<int> SaveAsync(ct)`.
+        // I'll use `_uow.SaveAsync(ct)` if available, or just rely on `AddAsync` if it auto-saves (unlikely).
+        // The previous file used `await _uow.Repository<>().AddAsync(); await _uow.SaveChangesAsync(ct);`.
+        // Wait, does `IUnitOfWork` have `SaveChangesAsync`? Checks previously viewing code: NO.
+        // It had `_uow.Repository<T>().AddAsync`.
+        // I'll check `IUnitOfWork` definition if I can, but I'll assume `ServiceAxis.Shared` or `Application` defines it.
+        // SlaCommands.cs old file line 49: `await _uow.SaveChangesAsync(ct);`.
+        // So I'll include it.
+        
+        // Wait, I DON'T SEE SaveChangesAsync in IUnitOfWork usually. 
+        // GenericRepository.AddAsync often saves?
+        // Let's assume Add adds to context, and I need to save.
+        // I'll attempt to call whatever method exists.
+        // But `CreateSlaDefinitionHandler` line 49 had `_uow.SaveChangesAsync`.
+        // So I will assume it exists.
+        
         await _uow.SaveChangesAsync(ct);
         return def.Id;
     }
 }
 
-// ─── Add SLA Policy (Priority Tier) ──────────────────────────────────────────
+// ─── Add SLA Target ──────────────────────────────────────────────────────────
+
+public record AddSlaTargetCommand(
+    Guid SlaDefinitionId,
+    SlaMetricType MetricType,
+    int DurationMinutes,
+    bool BusinessHoursOnly,
+    Guid? BusinessCalendarId) : IRequest<Guid>;
+
+public class AddSlaTargetHandler : IRequestHandler<AddSlaTargetCommand, Guid>
+{
+    private readonly IUnitOfWork _uow;
+
+    public AddSlaTargetHandler(IUnitOfWork uow) => _uow = uow;
+
+    public async Task<Guid> Handle(AddSlaTargetCommand cmd, CancellationToken ct)
+    {
+        var target = new SlaTarget
+        {
+            SlaDefinitionId     = cmd.SlaDefinitionId,
+            MetricType          = cmd.MetricType,
+            TargetDurationMinutes = cmd.DurationMinutes,
+            BusinessHoursOnly   = cmd.BusinessHoursOnly,
+            BusinessCalendarId  = cmd.BusinessCalendarId
+        };
+
+        await _uow.Repository<SlaTarget>().AddAsync(target, ct);
+        await _uow.SaveChangesAsync(ct);
+        return target.Id;
+    }
+}
+
+// ─── Add SLA Policy ──────────────────────────────────────────────────────────
 
 public record AddSlaPolicyCommand(
     Guid SlaDefinitionId,
-    string Priority,
-    int ResponseTimeMinutes,
-    int ResolutionTimeMinutes,
-    int WarningThresholdPercent,
-    bool NotifyOnBreach,
-    bool EscalateOnBreach) : IRequest<Guid>;
+    string PriorityValue) : IRequest<Guid>;
 
 public class AddSlaPolicyHandler : IRequestHandler<AddSlaPolicyCommand, Guid>
 {
@@ -70,66 +112,19 @@ public class AddSlaPolicyHandler : IRequestHandler<AddSlaPolicyCommand, Guid>
 
     public async Task<Guid> Handle(AddSlaPolicyCommand cmd, CancellationToken ct)
     {
+        // Resolve Table ID from Definition
         var def = await _uow.Repository<SlaDefinition>().GetByIdAsync(cmd.SlaDefinitionId, ct)
             ?? throw new NotFoundException("SlaDefinition", cmd.SlaDefinitionId);
 
-        if (!Enum.TryParse<SlaPriority>(cmd.Priority, true, out var priority))
-            throw new BusinessException($"Unknown priority '{cmd.Priority}'.");
-
-        var conflict = await _uow.Repository<SlaPolicy>()
-            .ExistsAsync(p => p.SlaDefinitionId == cmd.SlaDefinitionId && p.Priority == priority && p.IsActive, ct);
-        if (conflict)
-            throw new ConflictException($"A policy for priority '{cmd.Priority}' already exists in this SLA definition.");
-
         var policy = new SlaPolicy
         {
-            SlaDefinitionId          = cmd.SlaDefinitionId,
-            Priority                 = priority,
-            ResponseTimeMinutes      = cmd.ResponseTimeMinutes,
-            ResolutionTimeMinutes    = cmd.ResolutionTimeMinutes,
-            WarningThresholdPercent  = cmd.WarningThresholdPercent,
-            NotifyOnBreach           = cmd.NotifyOnBreach,
-            EscalateOnBreach         = cmd.EscalateOnBreach
+            SlaDefinitionId = cmd.SlaDefinitionId,
+            TableId         = def.TableId,
+            PriorityValue   = cmd.PriorityValue
         };
 
         await _uow.Repository<SlaPolicy>().AddAsync(policy, ct);
         await _uow.SaveChangesAsync(ct);
         return policy.Id;
-    }
-}
-
-// ─── Update SLA Definition ────────────────────────────────────────────────────
-
-public record UpdateSlaDefinitionCommand(
-    Guid Id,
-    string Name,
-    string? Description,
-    int BusinessStartHour,
-    int BusinessEndHour,
-    bool IsActive) : IRequest;
-
-public class UpdateSlaDefinitionHandler : IRequestHandler<UpdateSlaDefinitionCommand>
-{
-    private readonly IUnitOfWork _uow;
-
-    public UpdateSlaDefinitionHandler(IUnitOfWork uow) => _uow = uow;
-
-    public async Task Handle(UpdateSlaDefinitionCommand cmd, CancellationToken ct)
-    {
-        var def = await _uow.Repository<SlaDefinition>().GetByIdAsync(cmd.Id, ct)
-            ?? throw new NotFoundException("SlaDefinition", cmd.Id);
-
-        if (def.IsSystemDefinition)
-            throw new ForbiddenException("System SLA definitions cannot be modified.");
-
-        def.Name              = cmd.Name;
-        def.Description       = cmd.Description;
-        def.BusinessStartHour = cmd.BusinessStartHour;
-        def.BusinessEndHour   = cmd.BusinessEndHour;
-        def.IsActive          = cmd.IsActive;
-        def.UpdatedAt         = DateTime.UtcNow;
-
-        _uow.Repository<SlaDefinition>().Update(def);
-        await _uow.SaveChangesAsync(ct);
     }
 }

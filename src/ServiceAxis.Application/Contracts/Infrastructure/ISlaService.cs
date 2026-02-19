@@ -8,33 +8,48 @@ namespace ServiceAxis.Application.Contracts.Infrastructure;
 public interface ISlaService
 {
     /// <summary>
-    /// Creates and starts an SLA instance for a newly created record.
-    /// Looks up the correct SlaPolicy based on table name and priority.
+    /// Starts the SLA timer for a newly created or updated record.
+    /// Checks if any SLA definition matches the record's criteria (e.g. Priority).
     /// </summary>
-    Task<SlaInstance?> StartSlaAsync(
-        Guid recordId,
-        string tableName,
-        int priority,
-        CancellationToken ct = default);
+    Task StartSlaAsync(Guid recordId, string tableName, int priority, Guid? tenantId, CancellationToken ct = default);
 
     /// <summary>
-    /// Pauses the SLA timer (e.g. when state = "Waiting for Customer").
+    /// Pauses any active Response/Resolution SLA timers for the record.
     /// </summary>
     Task PauseSlaAsync(Guid recordId, CancellationToken ct = default);
 
     /// <summary>
-    /// Resumes a paused SLA timer.
+    /// Resumes paused SLA timers for the record.
     /// </summary>
     Task ResumeSlaAsync(Guid recordId, CancellationToken ct = default);
 
     /// <summary>
-    /// Marks the SLA as met (called when record is resolved/closed).
+    /// Stops the 'First Response' SLA timer if active.
+    /// </summary>
+    Task MarkResponseCompletedAsync(Guid recordId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Stops the 'Resolution' SLA timer (and effectively completes the lifecycle).
     /// </summary>
     Task CompleteSlaAsync(Guid recordId, CancellationToken ct = default);
 
     /// <summary>
-    /// Evaluates all active SLA instances for breaches and warnings.
-    /// Invoked by Hangfire every minute.
+    /// Evaluates all active SLA instances for breaches and triggers escalations.
+    /// Invoked by Hangfire recurring job.
     /// </summary>
     Task EvaluateAllActiveAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Retrieves the current status of all SLA timers for a record.
+    /// </summary>
+    Task<List<SlaStatusDto>> GetRecordSlaStatusAsync(Guid recordId, CancellationToken ct = default);
 }
+
+public record SlaStatusDto(
+    Guid SlaInstanceId,
+    string Metric,
+    DateTime TargetTime,
+    int RemainingMinutes,
+    bool IsBreached,
+    bool IsPaused,
+    string Status);

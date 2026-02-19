@@ -2,7 +2,7 @@ using MediatR;
 using ServiceAxis.Application.Contracts.Persistence;
 using ServiceAxis.Domain.Common;
 using ServiceAxis.Domain.Entities.Sla;
-using ServiceAxis.Domain.Enums;
+using ServiceAxis.Domain.Entities.Platform;
 using ServiceAxis.Shared.Exceptions;
 
 namespace ServiceAxis.Application.Features.Sla.Queries;
@@ -16,23 +16,9 @@ public record SlaDefinitionDto(
     Guid Id,
     string Name,
     string? Description,
-    string TableName,
-    string Type,
-    string ScheduleType,
-    int BusinessStartHour,
-    int BusinessEndHour,
+    Guid TableId,
     bool IsActive,
-    DateTime CreatedAt,
-    IReadOnlyList<SlaPolicyDto> Policies);
-
-public record SlaPolicyDto(
-    Guid Id,
-    string Priority,
-    int ResponseTimeMinutes,
-    int ResolutionTimeMinutes,
-    int WarningThresholdPercent,
-    bool NotifyOnBreach,
-    bool EscalateOnBreach);
+    DateTime CreatedAt);
 
 public class ListSlaDefinitionsHandler : IRequestHandler<ListSlaDefinitionsQuery, PagedResult<SlaDefinitionDto>>
 {
@@ -42,24 +28,22 @@ public class ListSlaDefinitionsHandler : IRequestHandler<ListSlaDefinitionsQuery
 
     public async Task<PagedResult<SlaDefinitionDto>> Handle(ListSlaDefinitionsQuery q, CancellationToken ct)
     {
+        Guid? tableId = null;
+        if (!string.IsNullOrEmpty(q.TableName))
+        {
+            var tables = await _uow.Repository<SysTable>().FindAsync(t => t.Name == q.TableName, ct);
+            var table = tables.FirstOrDefault();
+            if (table != null) tableId = table.Id;
+            else return new PagedResult<SlaDefinitionDto> { Items = [], TotalCount = 0, PageNumber = q.Page, PageSize = q.PageSize };
+        }
+
         var paged = await _uow.Repository<SlaDefinition>()
             .GetPagedAsync(q.Page, q.PageSize,
-                d => d.IsActive && (q.TableName == null || d.TableName == q.TableName), ct);
+                d => d.IsActive && (!tableId.HasValue || d.TableId == tableId.Value), ct);
 
-        var dtos = new List<SlaDefinitionDto>();
-        foreach (var def in paged.Items)
-        {
-            var policies = (await _uow.Repository<SlaPolicy>()
-                .FindAsync(p => p.SlaDefinitionId == def.Id && p.IsActive, ct))
-                .Select(p => new SlaPolicyDto(p.Id, p.Priority.ToString(),
-                    p.ResponseTimeMinutes, p.ResolutionTimeMinutes,
-                    p.WarningThresholdPercent, p.NotifyOnBreach, p.EscalateOnBreach))
-                .ToList();
-
-            dtos.Add(new SlaDefinitionDto(def.Id, def.Name, def.Description, def.TableName,
-                def.Type.ToString(), def.ScheduleType.ToString(),
-                def.BusinessStartHour, def.BusinessEndHour, def.IsActive, def.CreatedAt, policies));
-        }
+        var dtos = paged.Items.Select(def => new SlaDefinitionDto(
+            def.Id, def.Name, def.Description, def.TableId, def.IsActive, def.CreatedAt))
+            .ToList();
 
         return new PagedResult<SlaDefinitionDto>
         {
@@ -86,15 +70,7 @@ public class GetSlaDefinitionHandler : IRequestHandler<GetSlaDefinitionQuery, Sl
         var def = await _uow.Repository<SlaDefinition>().GetByIdAsync(q.Id, ct);
         if (def is null) return null;
 
-        var policies = (await _uow.Repository<SlaPolicy>()
-            .FindAsync(p => p.SlaDefinitionId == def.Id && p.IsActive, ct))
-            .Select(p => new SlaPolicyDto(p.Id, p.Priority.ToString(),
-                p.ResponseTimeMinutes, p.ResolutionTimeMinutes,
-                p.WarningThresholdPercent, p.NotifyOnBreach, p.EscalateOnBreach))
-            .ToList();
-
-        return new SlaDefinitionDto(def.Id, def.Name, def.Description, def.TableName,
-            def.Type.ToString(), def.ScheduleType.ToString(),
-            def.BusinessStartHour, def.BusinessEndHour, def.IsActive, def.CreatedAt, policies);
+        return new SlaDefinitionDto(
+            def.Id, def.Name, def.Description, def.TableId, def.IsActive, def.CreatedAt);
     }
 }
