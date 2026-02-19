@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ServiceAxis.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using ServiceAxis.Infrastructure.Persistence;
 namespace ServiceAxis.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ServiceAxisDbContext))]
-    partial class ServiceAxisDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260219125734_AddMetadataEntities")]
+    partial class AddMetadataEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -945,6 +948,9 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("TableId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("TableId1")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
@@ -957,6 +963,8 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TableId");
+
+                    b.HasIndex("TableId1");
 
                     b.ToTable("SysFields");
                 });
@@ -2074,9 +2082,15 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ServiceAxis.Domain.Entities.Platform.SysField", b =>
                 {
+                    b.HasOne("ServiceAxis.Domain.Entities.Platform.SysTable", null)
+                        .WithMany()
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("ServiceAxis.Domain.Entities.Platform.SysTable", "Table")
                         .WithMany("Fields")
-                        .HasForeignKey("TableId")
+                        .HasForeignKey("TableId1")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

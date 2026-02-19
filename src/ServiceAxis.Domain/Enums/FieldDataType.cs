@@ -43,5 +43,8 @@ public enum FieldDataType
     Phone = 12,
 
     /// <summary>Auto-incrementing number with optional prefix (e.g. INC0001).</summary>
-    AutoNumber = 13
+    AutoNumber = 13,
+
+    /// <summary>Multi-line or rich text content.</summary>
+    LongText = 14
 }

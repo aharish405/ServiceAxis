@@ -77,4 +77,7 @@ public class SysField : BaseEntity
 
     /// <summary>Tenant scope (null = global).</summary>
     public Guid? TenantId { get; set; }
+
+    // Navigation
+    public ICollection<SysChoice> Choices { get; set; } = new List<SysChoice>();
 }

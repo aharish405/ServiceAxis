@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ServiceAxis.Domain.Entities;
-using ServiceAxis.Domain.Entities;
+
 using ServiceAxis.Domain.Entities.Assignment;
 using ServiceAxis.Domain.Entities.Forms;
 using ServiceAxis.Domain.Entities.Notifications;
@@ -34,6 +34,7 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
     // ─── Platform Metadata ───
     public DbSet<SysTable> SysTables => Set<SysTable>();
     public DbSet<SysField> SysFields => Set<SysField>();
+    public DbSet<SysChoice> SysChoices => Set<SysChoice>();
 
     // ─── Universal Record Engine ───
     public DbSet<PlatformRecord> PlatformRecords => Set<PlatformRecord>();
@@ -97,10 +98,17 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
 
         // SysTable relationships - require manual cleanup of dependencies
         builder.Entity<SysField>()
-            .HasOne<SysTable>()
-            .WithMany()
+            .HasOne(f => f.Table)
+            .WithMany(t => t.Fields)
             .HasForeignKey(f => f.TableId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Choice configuration - Cascading delete is safe here (Part of field definition)
+        builder.Entity<SysChoice>()
+            .HasOne(c => c.Field)
+            .WithMany(f => f.Choices)
+            .HasForeignKey(c => c.FieldId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.Entity<PlatformRecord>()
             .HasOne<SysTable>()

@@ -119,6 +119,7 @@ try
             await db.Database.MigrateAsync();
             logger.LogInformation("Migrations applied. Seeding database...");
             await DbSeeder.SeedAsync(userManager, roleManager);
+            await MetadataSeeder.SeedAsync(db);
             logger.LogInformation("Database ready.");
         }
         catch (Exception ex)
