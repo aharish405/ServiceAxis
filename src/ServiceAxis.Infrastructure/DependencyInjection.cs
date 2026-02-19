@@ -10,6 +10,7 @@ using ServiceAxis.Infrastructure.BackgroundJobs;
 using ServiceAxis.Infrastructure.Persistence;
 using ServiceAxis.Infrastructure.Persistence.Repositories;
 using ServiceAxis.Infrastructure.Services;
+using ServiceAxis.Infrastructure.Services.Automation;
 
 namespace ServiceAxis.Infrastructure;
 
@@ -74,6 +75,12 @@ public static class DependencyInjection
         services.AddScoped<ISlaService, SlaService>();
         services.AddScoped<IAssignmentService, AssignmentService>();
         services.AddScoped<IStateMachineService, StateMachineService>();
+
+        // ─── Automation Engine ───
+        services.AddScoped<IAutomationEngine, AutomationEngine>();
+        services.AddScoped<IConditionEvaluator, ConditionEvaluator>();
+        services.AddScoped<IAutomationActionExecutor, AutomationActionExecutor>();
+        services.AddScoped<IPlatformEventPublisher, PlatformEventPublisher>();
 
         // Register missing form/field engine services
         services.AddScoped<IFormEngineService, FormEngineService>();

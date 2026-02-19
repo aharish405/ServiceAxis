@@ -7,6 +7,7 @@ using ServiceAxis.Shared.Exceptions;
 using ServiceAxis.Domain.Entities.Platform;
 using ServiceAxis.Domain.Enums;
 using ServiceAxis.Application.Contracts.Identity;
+using ServiceAxis.Application.Common.Models;
 
 namespace ServiceAxis.Application.Features.Records.Commands;
 
@@ -40,6 +41,7 @@ public class CreateRecordHandler : IRequestHandler<CreateRecordCommand, RecordRe
     private readonly ICurrentUserService   _currentUser;
     private readonly IStateMachineService  _stateMachine;
     private readonly IUnitOfWork           _uow;
+    private readonly IPlatformEventPublisher _events;
 
     public CreateRecordHandler(
         IMetadataCache cache,
@@ -53,7 +55,8 @@ public class CreateRecordHandler : IRequestHandler<CreateRecordCommand, RecordRe
         IWorkflowEngine workflow,
         ICurrentUserService currentUser,
         IStateMachineService stateMachine,
-        IUnitOfWork uow)
+        IUnitOfWork uow,
+        IPlatformEventPublisher events)
     {
         _cache   = cache;
         _records = records;
@@ -67,6 +70,7 @@ public class CreateRecordHandler : IRequestHandler<CreateRecordCommand, RecordRe
         _currentUser = currentUser;
         _stateMachine = stateMachine;
         _uow     = uow;
+        _events  = events;
     }
 
     public async Task<RecordResult> Handle(CreateRecordCommand cmd, CancellationToken ct)
@@ -179,6 +183,13 @@ public class CreateRecordHandler : IRequestHandler<CreateRecordCommand, RecordRe
             await _assignment.AutoAssignAsync(record.Id, table.Name, priority, ct);
         }
 
+        await _events.PublishAsync(new RecordCreatedEvent {
+            RecordId = record.Id,
+            TableId = table.Id,
+            TableName = table.Name,
+            TenantId = record.TenantId
+        });
+
         return new RecordResult(record.Id, cmd.TableName, record.RecordNumber, record.State, record.ShortDescription, cmd.FieldValues, record.CreatedAt);
     }
 }
@@ -202,6 +213,7 @@ public class UpdateRecordHandler : IRequestHandler<UpdateRecordCommand, RecordRe
     private readonly IPermissionService     _permission;
     private readonly IWorkflowEngine       _workflow;
     private readonly IUnitOfWork           _uow;
+    private readonly IPlatformEventPublisher _events;
 
     public UpdateRecordHandler(
         IMetadataCache cache,
@@ -213,7 +225,8 @@ public class UpdateRecordHandler : IRequestHandler<UpdateRecordCommand, RecordRe
         IActivityService activity,
         IPermissionService permission,
         IWorkflowEngine workflow,
-        IUnitOfWork uow)
+        IUnitOfWork uow,
+        IPlatformEventPublisher events)
     {
         _cache   = cache;
         _records = records;
@@ -225,6 +238,7 @@ public class UpdateRecordHandler : IRequestHandler<UpdateRecordCommand, RecordRe
         _permission = permission;
         _workflow = workflow;
         _uow     = uow;
+        _events  = events;
     }
 
     public async Task<RecordResult> Handle(UpdateRecordCommand cmd, CancellationToken ct)
@@ -348,6 +362,16 @@ public class UpdateRecordHandler : IRequestHandler<UpdateRecordCommand, RecordRe
 
             await _uow.SaveChangesAsync(ct);
             await _uow.CommitTransactionAsync(ct);
+
+            // Publish Event
+            var eventChanges = changes.ToDictionary(c => c.FieldName, c => (c.OldValue, c.NewValue));
+            await _events.PublishAsync(new RecordUpdatedEvent {
+                RecordId = record.Id,
+                TableId = table.Id,
+                TableName = table.Name,
+                TenantId = record.TenantId,
+                ChangedFields = eventChanges
+            });
         }
         catch
         {

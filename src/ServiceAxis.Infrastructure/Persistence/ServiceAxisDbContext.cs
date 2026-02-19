@@ -11,6 +11,7 @@ using ServiceAxis.Domain.Entities.Records;
 using ServiceAxis.Domain.Entities.Security;
 using ServiceAxis.Domain.Entities.Sla;
 using ServiceAxis.Domain.Entities.Activity;
+using ServiceAxis.Domain.Entities.Automation;
 using ServiceAxis.Domain.Entities.Workflow;
 using ServiceAxis.Application.Contracts.Identity;
 
@@ -88,6 +89,13 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
     public DbSet<FieldChange> FieldChanges => Set<FieldChange>();
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
+
+    // ─── Automation Engine ───
+    public DbSet<AutomationRule> AutomationRules => Set<AutomationRule>();
+    public DbSet<AutomationTrigger> AutomationTriggers => Set<AutomationTrigger>();
+    public DbSet<AutomationCondition> AutomationConditions => Set<AutomationCondition>();
+    public DbSet<AutomationAction> AutomationActions => Set<AutomationAction>();
+    public DbSet<AutomationExecutionLog> AutomationExecutionLogs => Set<AutomationExecutionLog>();
 
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -323,12 +331,39 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
             .HasForeignKey(e => e.SlaInstanceId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // SLA Tenant filters
-        builder.Entity<SlaDefinition>().HasQueryFilter(x => x.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
-        builder.Entity<SlaInstance>().HasQueryFilter(x => x.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
-        builder.Entity<BusinessCalendar>().HasQueryFilter(x => x.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
+        // ─── Automation Engine Configuration ───
+        builder.Entity<AutomationRule>().ToTable("AutomationRules", "platform");
+        builder.Entity<AutomationTrigger>().ToTable("AutomationTriggers", "platform");
+        builder.Entity<AutomationCondition>().ToTable("AutomationConditions", "platform");
+        builder.Entity<AutomationAction>().ToTable("AutomationActions", "platform");
+        builder.Entity<AutomationExecutionLog>().ToTable("AutomationExecutionLogs", "platform");
 
+        builder.Entity<AutomationTrigger>()
+            .HasOne(t => t.Rule)
+            .WithMany(r => r.Triggers)
+            .HasForeignKey(t => t.RuleId)
+            .OnDelete(DeleteBehavior.Cascade);
 
+        builder.Entity<AutomationCondition>()
+            .HasOne(c => c.Rule)
+            .WithMany(r => r.Conditions)
+            .HasForeignKey(c => c.RuleId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<AutomationAction>()
+            .HasOne(a => a.Rule)
+            .WithMany(r => r.Actions)
+            .HasForeignKey(a => a.RuleId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<AutomationExecutionLog>()
+            .HasOne(l => l.Rule)
+            .WithMany()
+            .HasForeignKey(l => l.RuleId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Automation Tenant filters
+        builder.Entity<AutomationRule>().HasQueryFilter(x => x.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
 
         // Fix multiple cascade paths (SQL Server error 1785)
         foreach (var relationship in builder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))

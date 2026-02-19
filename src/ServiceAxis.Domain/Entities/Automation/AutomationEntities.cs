@@ -9,9 +9,9 @@ public class AutomationRule : BaseEntity
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public Guid TableId { get; set; }
-    public bool IsActive { get; set; }
     public AutomationExecutionMode ExecutionMode { get; set; }
     public bool StopProcessingOnMatch { get; set; }
+    public Guid? TenantId { get; set; }
 
     // Navigation
     public SysTable Table { get; set; } = null!;
@@ -59,6 +59,7 @@ public class AutomationExecutionLog : BaseEntity
     public AutomationExecutionStatus ExecutionStatus { get; set; }
     public string? ExecutionMessage { get; set; }
     public long DurationMs { get; set; }
+    public Guid? TenantId { get; set; }
 
     // Navigation
     public AutomationRule Rule { get; set; } = null!;

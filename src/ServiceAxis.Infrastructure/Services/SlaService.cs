@@ -4,6 +4,7 @@ using ServiceAxis.Application.Contracts.Infrastructure;
 using ServiceAxis.Domain.Entities.Sla;
 using ServiceAxis.Domain.Enums;
 using ServiceAxis.Infrastructure.Persistence;
+using ServiceAxis.Application.Common.Models;
 using ServiceAxis.Shared.Exceptions;
 
 namespace ServiceAxis.Infrastructure.Services;
@@ -12,15 +13,18 @@ public class SlaService : ISlaService
 {
     private readonly ServiceAxisDbContext _db;
     private readonly IActivityService     _activity;
+    private readonly IPlatformEventPublisher _events;
     private readonly ILogger<SlaService>  _logger;
 
     public SlaService(
         ServiceAxisDbContext db,
         IActivityService activity,
+        IPlatformEventPublisher events,
         ILogger<SlaService> logger)
     {
         _db       = db;
         _activity = activity;
+        _events   = events;
         _logger   = logger;
     }
 
@@ -285,6 +289,17 @@ public class SlaService : ISlaService
 
                 // Execute Escalations for Breach
                 await ExecuteEscalationsAsync(instance, SlaEscalationTrigger.OnBreach, ct);
+
+                // Publish Event
+                var tableName = await _db.SysTables.Where(t => t.Id == instance.TableId).Select(t => t.Name).FirstOrDefaultAsync(ct) ?? "";
+                await _events.PublishAsync(new SlaBreachedEvent {
+                    RecordId = instance.RecordId,
+                    TableId = instance.TableId,
+                    TableName = tableName,
+                    TenantId = instance.TenantId,
+                    MetricType = instance.MetricType,
+                    TargetTime = instance.TargetTime
+                });
             }
             else if (!instance.IsBreached)
             {

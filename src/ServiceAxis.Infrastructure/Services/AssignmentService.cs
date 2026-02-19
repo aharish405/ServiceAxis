@@ -5,6 +5,7 @@ using ServiceAxis.Application.Contracts.Infrastructure;
 using ServiceAxis.Domain.Entities.Assignment;
 using ServiceAxis.Domain.Enums;
 using ServiceAxis.Infrastructure.Persistence;
+using ServiceAxis.Application.Common.Models;
 using ServiceAxis.Shared.Exceptions;
 
 namespace ServiceAxis.Infrastructure.Services;
@@ -13,17 +14,20 @@ public class AssignmentService : IAssignmentService
 {
     private readonly ServiceAxisDbContext     _db;
     private readonly IActivityService        _activity;
+    private readonly IPlatformEventPublisher _events;
     private readonly ICurrentUserService     _currentUser;
     private readonly ILogger<AssignmentService> _logger;
 
     public AssignmentService(
         ServiceAxisDbContext db,
         IActivityService activity,
+        IPlatformEventPublisher events,
         ICurrentUserService currentUser,
         ILogger<AssignmentService> logger)
     {
         _db          = db;
         _activity    = activity;
+        _events      = events;
         _currentUser = currentUser;
         _logger      = logger;
     }
@@ -80,6 +84,19 @@ public class AssignmentService : IAssignmentService
                 isSystem: false,
                 changes: changes,
                 ct: ct);
+
+            // Publish Event
+            var tableName = await _db.SysTables.Where(t => t.Id == record.TableId).Select(t => t.Name).FirstOrDefaultAsync(ct) ?? "";
+            await _events.PublishAsync(new AssignmentChangedEvent {
+                RecordId = recordId,
+                TableId = record.TableId,
+                TableName = tableName,
+                TenantId = record.TenantId,
+                OldUserId = oldUser,
+                NewUserId = userId,
+                OldGroupId = oldGroup,
+                NewGroupId = groupId
+            });
         }
 
         await _db.SaveChangesAsync(ct);

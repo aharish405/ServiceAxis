@@ -5,6 +5,7 @@ using ServiceAxis.Domain.Common;
 using ServiceAxis.Domain.Entities.Activity;
 using ServiceAxis.Domain.Enums;
 using ServiceAxis.Infrastructure.Persistence;
+using ServiceAxis.Application.Common.Models;
 
 namespace ServiceAxis.Infrastructure.Services;
 
@@ -12,11 +13,16 @@ public class ActivityService : IActivityService
 {
     private readonly ServiceAxisDbContext _db;
     private readonly IPermissionService _permission;
+    private readonly IPlatformEventPublisher _events;
 
-    public ActivityService(ServiceAxisDbContext db, IPermissionService permission)
+    public ActivityService(
+        ServiceAxisDbContext db, 
+        IPermissionService permission,
+        IPlatformEventPublisher events)
     {
         _db = db;
         _permission = permission;
+        _events = events;
     }
 
     public async Task LogActivityAsync(
@@ -86,6 +92,17 @@ public class ActivityService : IActivityService
         });
 
         await _db.SaveChangesAsync(ct);
+
+        // Publish Event
+        var tableName = await _db.SysTables.Where(t => t.Id == record.TableId).Select(t => t.Name).FirstOrDefaultAsync(ct) ?? "";
+        await _events.PublishAsync(new CommentAddedEvent {
+            RecordId = recordId,
+            TableId = record.TableId,
+            TableName = tableName,
+            TenantId = record.TenantId,
+            CommentText = text,
+            IsInternal = isInternal
+        });
     }
 
     public async Task<PagedResult<ActivityTimelineDto>> GetTimelineAsync(Guid recordId, int page = 1, int pageSize = 20, CancellationToken ct = default)

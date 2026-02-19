@@ -4,6 +4,7 @@ using ServiceAxis.Application.Contracts.Infrastructure;
 using ServiceAxis.Domain.Entities.Assignment;
 using ServiceAxis.Domain.Enums;
 using ServiceAxis.Infrastructure.Persistence;
+using ServiceAxis.Application.Common.Models;
 using ServiceAxis.Shared.Exceptions;
 
 namespace ServiceAxis.Infrastructure.Services;
@@ -17,17 +18,20 @@ public class StateMachineService : IStateMachineService
     private readonly ServiceAxisDbContext _db;
     private readonly IActivityService    _activity;
     private readonly ISlaService        _sla;
+    private readonly IPlatformEventPublisher _events;
     private readonly ILogger<StateMachineService> _logger;
 
     public StateMachineService(
         ServiceAxisDbContext db,
         IActivityService activity,
         ISlaService sla,
+        IPlatformEventPublisher events,
         ILogger<StateMachineService> logger)
     {
         _db       = db;
         _activity = activity;
         _sla      = sla;
+        _events   = events;
         _logger   = logger;
     }
 
@@ -135,6 +139,17 @@ public class StateMachineService : IStateMachineService
             ct: ct);
 
         await _db.SaveChangesAsync(ct);
+
+        // Publish Event
+        var tableName = await _db.SysTables.Where(t => t.Id == record.TableId).Select(t => t.Name).FirstOrDefaultAsync(ct) ?? "";
+        await _events.PublishAsync(new StateChangedEvent {
+            RecordId = record.Id,
+            TableId = record.TableId,
+            TableName = tableName,
+            TenantId = record.TenantId,
+            OldState = fromDisplayName?.ToString() ?? "",
+            NewState = transition.ToState.DisplayName
+        });
 
         _logger.LogInformation(
             "[StateMachine] Record {RecordId} transitioned {From} → {To}",

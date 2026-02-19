@@ -16,5 +16,7 @@ public enum ActivityType
     SlaResumed,
     SlaCompleted,
     SlaBreached,
-    SlaEscalated
+    SlaEscalated,
+    AutomationExecuted,
+    AutomationFailed
 }

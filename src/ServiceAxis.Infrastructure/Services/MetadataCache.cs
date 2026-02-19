@@ -13,10 +13,12 @@ public class MetadataCache : IMetadataCache
     private readonly IMemoryCache _cache;
     private readonly ICurrentUserService _currentUser;
     private readonly ISysTableRepository _tables;
+    private readonly ISysFieldRepository _fields;
     private readonly IFormRepository _forms;
     private readonly ILogger<MetadataCache> _logger;
 
     private const string TableKeyPrefix = "mt_table_";
+    private const string FieldKeyPrefix = "mt_field_";
     private const string FormKeyPrefix = "mt_form_";
     private const string AllTablesKey = "mt_all_tables";
     private static readonly TimeSpan DefaultExpiration = TimeSpan.FromHours(1);
@@ -25,12 +27,14 @@ public class MetadataCache : IMetadataCache
         IMemoryCache cache, 
         ICurrentUserService currentUser,
         ISysTableRepository tables, 
+        ISysFieldRepository fields,
         IFormRepository forms,
         ILogger<MetadataCache> logger)
     {
         _cache = cache;
         _currentUser = currentUser;
         _tables = tables;
+        _fields = fields;
         _forms = forms;
         _logger = logger;
     }
@@ -52,6 +56,31 @@ public class MetadataCache : IMetadataCache
         }
 
         return table;
+    }
+
+    public async Task<SysTable?> GetTableByIdAsync(Guid tableId, CancellationToken ct = default)
+    {
+        var key = $"{TableKeyPrefix}id_{tableId}";
+        
+        if (!_cache.TryGetValue(key, out SysTable? table))
+        {
+            table = await _tables.GetByIdAsync(tableId);
+            if (table != null) _cache.Set(key, table, DefaultExpiration);
+        }
+        return table;
+    }
+
+    public async Task<SysField?> GetFieldAsync(Guid fieldId, CancellationToken ct = default)
+    {
+        var key = $"{FieldKeyPrefix}{fieldId}";
+
+        if (!_cache.TryGetValue(key, out SysField? field))
+        {
+            field = await _fields.GetByIdAsync(fieldId);
+            if (field != null) _cache.Set(key, field, DefaultExpiration);
+        }
+
+        return field;
     }
 
     public async Task<FormDefinition?> GetFormAsync(string tableName, string context = "default", CancellationToken ct = default)
