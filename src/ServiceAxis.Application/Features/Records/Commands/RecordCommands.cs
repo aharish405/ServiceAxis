@@ -38,6 +38,7 @@ public class CreateRecordHandler : IRequestHandler<CreateRecordCommand, RecordRe
     private readonly IPermissionService    _permission;
     private readonly IWorkflowEngine      _workflow;
     private readonly ICurrentUserService   _currentUser;
+    private readonly IStateMachineService  _stateMachine;
     private readonly IUnitOfWork           _uow;
 
     public CreateRecordHandler(
@@ -51,6 +52,7 @@ public class CreateRecordHandler : IRequestHandler<CreateRecordCommand, RecordRe
         IPermissionService permission,
         IWorkflowEngine workflow,
         ICurrentUserService currentUser,
+        IStateMachineService stateMachine,
         IUnitOfWork uow)
     {
         _cache   = cache;
@@ -63,6 +65,7 @@ public class CreateRecordHandler : IRequestHandler<CreateRecordCommand, RecordRe
         _permission = permission;
         _workflow = workflow;
         _currentUser = currentUser;
+        _stateMachine = stateMachine;
         _uow     = uow;
     }
 
@@ -121,6 +124,8 @@ public class CreateRecordHandler : IRequestHandler<CreateRecordCommand, RecordRe
             State            = "new",
             ShortDescription = shortDesc,
             Priority         = priority,
+            AssignedToUserId = cmd.FieldValues.TryGetValue("assigned_to", out var aTo) && !string.IsNullOrWhiteSpace(aTo) ? aTo : null,
+            AssignmentGroupId = cmd.FieldValues.TryGetValue("assignment_group", out var aGr) && Guid.TryParse(aGr, out var gId) ? gId : null,
             TenantId         = cmd.TenantId ?? _currentUser.TenantId
         };
 
@@ -157,8 +162,12 @@ public class CreateRecordHandler : IRequestHandler<CreateRecordCommand, RecordRe
                 CreatedAt = DateTime.UtcNow
             }, ct);
 
+
             // Workflow Triggers
             await _workflow.ProcessTriggersAsync(table.Id, record.Id, WorkflowTriggerEvent.RecordCreated, null, ct);
+
+            // Lifecycle Initialisation
+            await _stateMachine.InitialiseStateAsync(record.Id, table.Id, ct);
 
             await _uow.SaveChangesAsync(ct);
             await _uow.CommitTransactionAsync(ct);
@@ -194,6 +203,7 @@ public class UpdateRecordHandler : IRequestHandler<UpdateRecordCommand, RecordRe
     private readonly IRecordRepository      _records;
     private readonly IRecordValueRepository _values;
     private readonly ISlaService           _sla;
+    private readonly IAssignmentService    _assignment;
     private readonly IFieldTypeService      _fieldType;
     private readonly IActivityService       _activity;
     private readonly IPermissionService     _permission;
@@ -205,6 +215,7 @@ public class UpdateRecordHandler : IRequestHandler<UpdateRecordCommand, RecordRe
         IRecordRepository records,
         IRecordValueRepository values,
         ISlaService sla,
+        IAssignmentService assignment,
         IFieldTypeService fieldType,
         IActivityService activity,
         IPermissionService permission,
@@ -215,6 +226,7 @@ public class UpdateRecordHandler : IRequestHandler<UpdateRecordCommand, RecordRe
         _records = records;
         _values  = values;
         _sla     = sla;
+        _assignment = assignment;
         _fieldType = fieldType;
         _activity = activity;
         _permission = permission;
@@ -242,6 +254,31 @@ public class UpdateRecordHandler : IRequestHandler<UpdateRecordCommand, RecordRe
         await _uow.BeginTransactionAsync(ct);
         try
         {
+            // Handle explicit assignment changes
+            var newUA = record.AssignedToUserId;
+            var newGA = record.AssignmentGroupId;
+            bool assignChanged = false;
+
+            if (cmd.FieldValues.TryGetValue("assigned_to", out var valU))
+            {
+                newUA = string.IsNullOrWhiteSpace(valU) ? null : valU;
+                assignChanged = true;
+            }
+            if (cmd.FieldValues.TryGetValue("assignment_group", out var valG))
+            {
+                newGA = Guid.TryParse(valG, out var gid) ? gid : null;
+                assignChanged = true;
+            }
+
+            if (assignChanged)
+            {
+                await _assignment.AssignAsync(record.Id, newUA, newGA, ct);
+            }
+
+            // Block direct state updates
+            if (cmd.FieldValues.ContainsKey("state"))
+                throw new BusinessException("State cannot be updated directly. Use the /api/records/{table}/{id}/state endpoint.");
+
             foreach (var (key, newVal) in cmd.FieldValues)
             {
                 if (!fieldMap.TryGetValue(key, out var fd)) continue;
@@ -275,23 +312,6 @@ public class UpdateRecordHandler : IRequestHandler<UpdateRecordCommand, RecordRe
                 }, ct);
             }
 
-            bool statusChanged = false;
-            // Update cross-EAV fields (state, priority, etc.)
-            if (cmd.FieldValues.TryGetValue("state", out var newState) && !string.IsNullOrWhiteSpace(newState) && newState != record.State)
-            {
-                if (newState.Equals("resolved", StringComparison.OrdinalIgnoreCase) || newState.Equals("closed", StringComparison.OrdinalIgnoreCase))
-                    await _sla.CompleteSlaAsync(record.Id, ct);
-                
-                changes.Add(("state", null, record.State, newState));
-                statusChanged = true;
-
-                await _uow.Repository<RecordAudit>().AddAsync(new RecordAudit {
-                    RecordId = record.Id, FieldName = "state", OldValue = record.State, NewValue = newState, Action = "Transition", CreatedAt = DateTime.UtcNow
-                }, ct);
-
-                record.State = newState;
-            }
-
             if (cmd.FieldValues.TryGetValue("priority", out var priStr) && int.TryParse(priStr, out var pri) && pri != record.Priority)
             {
                 changes.Add(("priority", null, record.Priority.ToString(), pri.ToString()));
@@ -308,8 +328,8 @@ public class UpdateRecordHandler : IRequestHandler<UpdateRecordCommand, RecordRe
                 await _activity.LogActivityAsync(
                     table.Id,
                     record.Id,
-                    statusChanged ? ActivityType.StatusChanged : ActivityType.FieldChanged,
-                    statusChanged ? $"Status changed to {record.State}" : "Fields updated",
+                    ActivityType.FieldChanged,
+                    "Fields updated",
                     isSystem: true,
                     changes: changes,
                     ct: ct);

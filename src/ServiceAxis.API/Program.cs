@@ -122,6 +122,7 @@ try
             await DbSeeder.SeedAsync(userManager, roleManager);
             await SecuritySeeder.SeedAsync(db, roleManager);
             await MetadataSeeder.SeedAsync(db);
+            await LifecycleSeeder.SeedAsync(db);
             logger.LogInformation("Database ready.");
         }
         catch (Exception ex)

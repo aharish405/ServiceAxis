@@ -1,4 +1,5 @@
 using ServiceAxis.Domain.Common;
+using ServiceAxis.Domain.Entities.Assignment;
 using ServiceAxis.Domain.Entities.Platform;
 
 namespace ServiceAxis.Domain.Entities.Records;
@@ -50,6 +51,17 @@ public class PlatformRecord : BaseEntity
 
     /// <summary>UTC timestamp when the record was closed.</summary>
     public DateTime? ClosedAt { get; set; }
+
+    /// <summary>
+    /// FK to the current <see cref="RecordStateDefinition"/> for this record.
+    /// Null until a lifecycle is configured for the table.
+    /// Always mutated via <c>IStateMachineService</c> — never set directly.
+    /// </summary>
+    public Guid? CurrentStateId { get; set; }
+    public RecordStateDefinition? CurrentState { get; set; }
+
+    /// <summary>UTC timestamp of the last state transition.</summary>
+    public DateTime? StateChangedAt { get; set; }
 
     // Navigation
     public ICollection<RecordValue> Values { get; set; } = new List<RecordValue>();

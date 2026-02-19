@@ -60,9 +60,12 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
     public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
 
     // ─── Assignment ───
-    public DbSet<AssignmentGroup> AssignmentGroups => Set<AssignmentGroup>();
-    public DbSet<GroupMember> GroupMembers => Set<GroupMember>();
-    public DbSet<Queue> Queues => Set<Queue>();
+    public DbSet<AssignmentGroup>        AssignmentGroups        => Set<AssignmentGroup>();
+    public DbSet<GroupMember>            GroupMembers            => Set<GroupMember>();
+    public DbSet<Queue>                  Queues                  => Set<Queue>();
+    public DbSet<RecordStateDefinition> RecordStateDefinitions  => Set<RecordStateDefinition>();
+    public DbSet<StateTransition>       StateTransitions        => Set<StateTransition>();
+    public DbSet<RecordAssignment>      RecordAssignments       => Set<RecordAssignment>();
 
     // ─── SLA ───
     public DbSet<SlaDefinition> SlaDefinitions => Set<SlaDefinition>();
@@ -193,6 +196,64 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
 
         builder.Entity<Activity>()
             .HasIndex(a => new { a.RecordId, a.CreatedAt });
+
+        // ─── State Machine Configuration ───
+        builder.Entity<RecordStateDefinition>().ToTable("RecordStateDefinitions", "platform");
+        builder.Entity<StateTransition>().ToTable("StateTransitions", "platform");
+        builder.Entity<RecordAssignment>().ToTable("RecordAssignments", "platform");
+
+        builder.Entity<RecordStateDefinition>()
+            .HasOne(s => s.Table)
+            .WithMany()
+            .HasForeignKey(s => s.TableId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<StateTransition>()
+            .HasOne(t => t.Table)
+            .WithMany()
+            .HasForeignKey(t => t.TableId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<StateTransition>()
+            .HasOne(t => t.FromState)
+            .WithMany(s => s.TransitionsFrom)
+            .HasForeignKey(t => t.FromStateId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<StateTransition>()
+            .HasOne(t => t.ToState)
+            .WithMany(s => s.TransitionsTo)
+            .HasForeignKey(t => t.ToStateId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<RecordAssignment>()
+            .HasOne(ra => ra.Record)
+            .WithMany()
+            .HasForeignKey(ra => ra.RecordId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Indexes for performance (requirement §11)
+        builder.Entity<PlatformRecord>()
+            .HasIndex(r => r.CurrentStateId);
+        builder.Entity<RecordAssignment>()
+            .HasIndex(ra => ra.RecordId);
+        builder.Entity<RecordAssignment>()
+            .HasIndex(ra => ra.AssignedGroupId);
+        builder.Entity<RecordAssignment>()
+            .HasIndex(ra => ra.AssignedUserId);
+
+        // CurrentState — optional FK (nullable)
+        builder.Entity<PlatformRecord>()
+            .HasOne(r => r.CurrentState)
+            .WithMany()
+            .HasForeignKey(r => r.CurrentStateId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // Tenant filters
+        builder.Entity<RecordStateDefinition>().HasQueryFilter(
+            s => s.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
+        builder.Entity<StateTransition>().HasQueryFilter(
+            t => t.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
 
         builder.Entity<FieldChange>()
             .HasOne(f => f.Activity)

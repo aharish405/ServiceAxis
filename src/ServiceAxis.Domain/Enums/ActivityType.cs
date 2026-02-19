@@ -8,5 +8,7 @@ public enum ActivityType
     WorkNoteAdded,
     AttachmentAdded,
     WorkflowEvent,
-    StatusChanged
+    StatusChanged,
+    AssignmentChanged,
+    StateTransitioned
 }

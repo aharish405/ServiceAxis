@@ -504,6 +504,66 @@ The `IFileStorageProvider` abstraction lets you swap the storage back-end with z
 
 ---
 
+## Assignment & Lifecycle Management
+
+The platform includes a robust engine for managing work distribution and process flow, fully configurable via metadata.
+
+### Assignment System
+- **Assignment Groups:** Organize agents into functional teams (e.g., "Service Desk", "Network Ops").
+- **Queues & Routing:** 
+  - Define queues (e.g., "Critical Incidents") based on table and priority.
+  - **Auto-Assignment Strategies:** Round-Robin, Least Loaded, or Manual.
+- **Unified Model:** Records can be assigned to a User, a Group, or both.
+- **Audit:** All assignment changes are logged to the Activity Stream automatically.
+
+### State Machine Engine
+Every table can define its own lifecycle states and transitions:
+- **States:** Define stages like `New`, `In Progress`, `Pending`, `Resolved`, `Closed`.
+- **Transitions:** Control the allowed path (e.g., `New` → `In Progress` is allowed, but `New` → `Resolved` is forbidden).
+- **RBAC:** Restrict specific transitions to certain roles (e.g., only `Manager` can `Close` a record).
+- **Guardrails:** The engine validates every state change against the defined rules before committing.
+
+### Activity Integration
+All lifecycle events generate standard activity types:
+- `AssignmentChanged` — when user or group changes.
+- `StateTransitioned` — when state moves (e.g., New → In Progress).
+
+### API Usage
+
+#### Get Available Transitions for a Record
+```http
+GET /api/v1/records/incident/{id}/transitions
+Authorization: Bearer <token>
+```
+Response:
+```json
+[
+  { "id": "uuid", "toState": "resolved", "label": "Resolve Incident" },
+  { "id": "uuid", "toState": "pending", "label": "Hold" }
+]
+```
+
+#### Execute Transition
+```http
+POST /api/v1/records/incident/{id}/state
+{
+  "targetStateId": "uuid-of-resolved-state",
+  "comment": "Fix applied."
+}
+```
+
+#### Define an Assignment Group (Admin)
+```http
+POST /api/v1/assignment-groups
+{
+  "name": "Service Desk",
+  "email": "help@serviceaxis.io",
+  "defaultStrategy": "RoundRobin"
+}
+```
+
+---
+
 ### Example: Create an ITSM Incident Approval Workflow
 
 ```http

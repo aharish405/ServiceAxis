@@ -73,7 +73,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<ISlaService, SlaService>();
         services.AddScoped<IAssignmentService, AssignmentService>();
-
+        services.AddScoped<IStateMachineService, StateMachineService>();
 
         // Register missing form/field engine services
         services.AddScoped<IFormEngineService, FormEngineService>();

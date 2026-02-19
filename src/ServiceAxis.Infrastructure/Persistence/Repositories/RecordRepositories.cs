@@ -90,6 +90,8 @@ public class RecordRepository : GenericRepository<PlatformRecord>, IRecordReposi
                 query = query.Where(r => r.Priority == pri);
             else if (key.Equals("assigned_to", StringComparison.OrdinalIgnoreCase))
                 query = query.Where(r => r.AssignedToUserId == value);
+            else if (key.Equals("assignment_group", StringComparison.OrdinalIgnoreCase) && Guid.TryParse(value, out var grpId))
+                query = query.Where(r => r.AssignmentGroupId == grpId);
             else
             {
                 // Handle dynamic EAV fields
