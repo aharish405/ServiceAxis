@@ -75,6 +75,10 @@ public static class DependencyInjection
         services.AddScoped<IAssignmentService, AssignmentService>();
 
 
+        // Register missing form/field engine services
+        services.AddScoped<IFormEngineService, FormEngineService>();
+        services.AddScoped<IFieldTypeService, FieldTypeService>();
+
         services.AddScoped<ICacheService, MemoryCacheService>();
         services.AddScoped<IEmailService, LoggingEmailService>();
         services.AddScoped<ISmsService, LoggingSmsService>();
@@ -100,6 +104,9 @@ public static class DependencyInjection
         // ── Hangfire background job types ─────────────────────────────────
         services.AddScoped<PlatformHealthCheckJob>();
         services.AddScoped<AuditLogCleanupJob>();
+        services.AddScoped<SlaEvaluationJob>();
+        services.AddScoped<NotificationDispatchJob>();
+        services.AddScoped<RecordCleanupJob>();
 
         return services;
     }
