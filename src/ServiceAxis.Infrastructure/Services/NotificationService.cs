@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using ServiceAxis.Application.Contracts.Identity;
 using ServiceAxis.Application.Contracts.Infrastructure;
 using ServiceAxis.Domain.Entities.Notifications;
 using ServiceAxis.Domain.Enums;
@@ -12,17 +13,20 @@ public class NotificationService : INotificationService
     private readonly ServiceAxisDbContext _db;
     private readonly IEmailService _emailService;
     private readonly ISmsService _smsService;
+    private readonly ICurrentUserService _currentUser;
     private readonly ILogger<NotificationService> _logger;
 
     public NotificationService(
         ServiceAxisDbContext db,
         IEmailService emailService,
         ISmsService smsService,
+        ICurrentUserService currentUser,
         ILogger<NotificationService> logger)
     {
         _db = db;
         _emailService = emailService;
         _smsService = smsService;
+        _currentUser = currentUser;
         _logger = logger;
     }
 
@@ -119,6 +123,7 @@ public class NotificationService : INotificationService
                 Body = body,
                 Status = NotificationStatus.Pending,
                 RecordId = recordId,
+                TenantId = _currentUser.TenantId,
                 CreatedAt = DateTime.UtcNow
             };
 

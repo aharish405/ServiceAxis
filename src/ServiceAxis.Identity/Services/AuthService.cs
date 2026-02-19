@@ -8,23 +8,24 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using ServiceAxis.Application.Contracts.Persistence;
+using ServiceAxis.Domain.Entities;
 
 namespace ServiceAxis.Identity.Services;
 
-/// <summary>
-/// Implements JWT-based authentication: login, register, refresh and revoke.
-/// Refresh tokens are stored as ASP.NET Identity user tokens.
-/// </summary>
 public sealed class AuthService : IAuthService
 {
     private readonly UserManager<IdentityUser> _userManager;
+    private readonly IUnitOfWork _uow;
     private readonly JwtSettings _jwtSettings;
 
     public AuthService(
         UserManager<IdentityUser> userManager,
+        IUnitOfWork uow,
         IOptions<JwtSettings> jwtSettings)
     {
         _userManager = userManager;
+        _uow = uow;
         _jwtSettings = jwtSettings.Value;
     }
 
@@ -68,6 +69,20 @@ public sealed class AuthService : IAuthService
 
         // Assign default role
         await _userManager.AddToRoleAsync(user, "Agent");
+
+        // Create domain ApplicationUser profile
+        var appUser = new ApplicationUser
+        {
+            IdentityUserId = user.Id,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Email = request.Email,
+            PhoneNumber = request.PhoneNumber,
+            IsActive = true
+        };
+
+        await _uow.Repository<ApplicationUser>().AddAsync(appUser, cancellationToken);
+        await _uow.SaveChangesAsync(cancellationToken);
 
         return await GenerateTokensAndBuildResponseAsync(user);
     }
@@ -133,6 +148,18 @@ public sealed class AuthService : IAuthService
 
         tokenClaims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
         tokenClaims.AddRange(claims);
+
+        // Include TenantId if available in ApplicationUser profile
+        var appUser = (await _uow.Repository<ApplicationUser>().FindAsync(u => u.IdentityUserId == user.Id)).FirstOrDefault();
+        if (appUser?.TenantId != null)
+        {
+            tokenClaims.Add(new Claim("tenant_id", appUser.TenantId.Value.ToString()));
+        }
+        else if (appUser != null && !appUser.TenantId.HasValue)
+        {
+            // For now, if no tenant is assigned, we might want to default to a 'Default' tenant 
+            // but in a real enterprise setup, this is handled during onboarding.
+        }
 
         var key     = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
         var creds   = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

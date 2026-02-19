@@ -58,8 +58,7 @@ public record ListRecordsQuery(
     string TableName,
     int Page = 1,
     int PageSize = 20,
-    string? State = null,
-    string? AssignedToUserId = null) : IRequest<PagedResult<RecordSummaryDto>>;
+    Dictionary<string, string?>? Filters = null) : IRequest<PagedResult<RecordSummaryDto>>;
 
 public record RecordSummaryDto(
     Guid Id,
@@ -78,7 +77,8 @@ public class ListRecordsHandler : IRequestHandler<ListRecordsQuery, PagedResult<
 
     public async Task<PagedResult<RecordSummaryDto>> Handle(ListRecordsQuery q, CancellationToken ct)
     {
-        var paged = await _records.GetByTableAsync(q.TableName, q.Page, q.PageSize, q.State, q.AssignedToUserId, ct);
+        var filters = q.Filters ?? new Dictionary<string, string?>();
+        var paged = await _records.SearchAsync(q.TableName, filters, q.Page, q.PageSize, ct);
 
         return new PagedResult<RecordSummaryDto>
         {

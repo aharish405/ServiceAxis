@@ -15,6 +15,12 @@ public interface IRecordRepository : IGenericRepository<PlatformRecord>
         CancellationToken ct = default);
     Task<string> GenerateRecordNumberAsync(string tableName, CancellationToken ct = default);
     Task<PlatformRecord?> GetByNumberAsync(string tableName, string recordNumber, CancellationToken ct = default);
+    Task<PagedResult<PlatformRecord>> SearchAsync(
+        string tableName, 
+        Dictionary<string, string?> filters, 
+        int page, 
+        int pageSize, 
+        CancellationToken ct = default);
 }
 
 /// <summary>

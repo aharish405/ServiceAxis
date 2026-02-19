@@ -20,4 +20,10 @@ public interface ICurrentUserService
 
     /// <summary>Returns true if the current user is in the given role.</summary>
     bool IsInRole(string role);
+
+    /// <summary>Gets the roles assigned to the current user.</summary>
+    IEnumerable<string> Roles { get; }
+
+    /// <summary>Gets the current user's Tenant ID (if applicable).</summary>
+    Guid? TenantId { get; }
 }

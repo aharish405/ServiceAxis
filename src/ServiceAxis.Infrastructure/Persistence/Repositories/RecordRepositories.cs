@@ -67,6 +67,51 @@ public class RecordRepository : GenericRepository<PlatformRecord>, IRecordReposi
             .Include(r => r.Table)
             .Include(r => r.Values).ThenInclude(v => v.Field)
             .FirstOrDefaultAsync(r => r.Table.Name == tableName && r.RecordNumber == recordNumber && !r.IsDeleted, ct);
+
+    public async Task<PagedResult<PlatformRecord>> SearchAsync(
+        string tableName, 
+        Dictionary<string, string?> filters, 
+        int page, 
+        int pageSize, 
+        CancellationToken ct = default)
+    {
+        var query = Db.PlatformRecords
+            .Include(r => r.Table)
+            .Where(r => r.Table.Name == tableName.ToLowerInvariant() && !r.IsDeleted);
+
+        foreach (var (key, value) in filters)
+        {
+            if (string.IsNullOrWhiteSpace(value)) continue;
+
+            // Handle reserved fields
+            if (key.Equals("state", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(r => r.State == value);
+            else if (key.Equals("priority", StringComparison.OrdinalIgnoreCase) && int.TryParse(value, out var pri))
+                query = query.Where(r => r.Priority == pri);
+            else if (key.Equals("assigned_to", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(r => r.AssignedToUserId == value);
+            else
+            {
+                // Handle dynamic EAV fields
+                query = query.Where(r => r.Values.Any(v => v.Field.FieldName == key && v.Value == value));
+            }
+        }
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return new PagedResult<PlatformRecord>
+        {
+            Items = items,
+            TotalCount = total,
+            PageNumber = page,
+            PageSize = pageSize
+        };
+    }
 }
 
 public class RecordValueRepository : GenericRepository<RecordValue>, IRecordValueRepository

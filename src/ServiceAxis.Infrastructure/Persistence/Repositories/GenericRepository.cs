@@ -22,6 +22,7 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
     }
 
     // ── Queries ───────────────────────────────────────────────────────────
+    public IQueryable<T> AsQueryable() => DbSet.AsNoTracking();
 
     public async Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default) =>
         await DbSet.Where(e => e.IsActive).AsNoTracking().ToListAsync(cancellationToken);

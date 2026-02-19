@@ -106,6 +106,7 @@ try
     var app = builder.Build();
 
     // ─── Database auto-migrate + seed ─────────────────────────────────────
+    // ─── Database auto-migrate + seed ─────────────────────────────────────
     using (var scope = app.Services.CreateScope())
     {
         var logger      = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
@@ -119,6 +120,7 @@ try
             await db.Database.MigrateAsync();
             logger.LogInformation("Migrations applied. Seeding database...");
             await DbSeeder.SeedAsync(userManager, roleManager);
+            await SecuritySeeder.SeedAsync(db, roleManager);
             await MetadataSeeder.SeedAsync(db);
             logger.LogInformation("Database ready.");
         }

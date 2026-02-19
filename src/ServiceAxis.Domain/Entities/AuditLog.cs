@@ -37,7 +37,7 @@ public class AuditLog : BaseEntity
     public string? UserAgent { get; set; }
 
     /// <summary>Gets or sets the identity of the acting user.</summary>
-    public string? UserId { get; set; }
+    public Guid? UserId { get; set; }
 
     /// <summary>Gets or sets the identifier of the tenant context.</summary>
     public Guid? TenantId { get; set; }

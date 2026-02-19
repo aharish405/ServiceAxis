@@ -8,20 +8,18 @@ namespace ServiceAxis.Infrastructure.Services;
 
 public class FormEngineService : IFormEngineService
 {
+    private readonly IMetadataCache _cache;
     private readonly ServiceAxisDbContext _db;
 
-    public FormEngineService(ServiceAxisDbContext db) => _db = db;
+    public FormEngineService(IMetadataCache cache, ServiceAxisDbContext db)
+    {
+        _cache = cache;
+        _db = db;
+    }
 
     public async Task<FormSchemaDto> GetFormSchemaAsync(string tableName, string context, CancellationToken ct)
     {
-        var form = await _db.FormDefinitions
-            .Include(f => f.Table)
-            .Include(f => f.Sections)
-                .ThenInclude(s => s.FieldMappings)
-                    .ThenInclude(m => m.Field)
-            .Where(f => f.Table.Name == tableName && f.FormContext == context && f.IsActive)
-            .OrderByDescending(f => f.IsDefault)
-            .FirstOrDefaultAsync(ct);
+        var form = await _cache.GetFormAsync(tableName, context, ct);
 
         if (form is null)
         {

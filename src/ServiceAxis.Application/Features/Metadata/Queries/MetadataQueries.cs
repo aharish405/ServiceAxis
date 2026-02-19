@@ -1,4 +1,5 @@
 using MediatR;
+using ServiceAxis.Application.Contracts.Infrastructure;
 using ServiceAxis.Application.Contracts.Persistence;
 using ServiceAxis.Domain.Common;
 using ServiceAxis.Domain.Entities.Platform;
@@ -36,13 +37,13 @@ public record FieldSchemaDto(
 
 public class GetTableSchemaHandler : IRequestHandler<GetTableSchemaQuery, TableSchemaDto>
 {
-    private readonly ISysTableRepository _tables;
+    private readonly IMetadataCache _cache;
 
-    public GetTableSchemaHandler(ISysTableRepository tables) => _tables = tables;
+    public GetTableSchemaHandler(IMetadataCache cache) => _cache = cache;
 
     public async Task<TableSchemaDto> Handle(GetTableSchemaQuery q, CancellationToken ct)
     {
-        var table = await _tables.GetWithFieldsAsync(q.TableName, ct)
+        var table = await _cache.GetTableAsync(q.TableName, ct)
             ?? throw new NotFoundException($"Table '{q.TableName}' not found.");
 
         return new TableSchemaDto(
@@ -101,15 +102,15 @@ public class ListSysTablesHandler : IRequestHandler<ListSysTablesQuery, PagedRes
 
 // ─── Get Form Schema ──────────────────────────────────────────────────────────
 
-public record GetFormSchemaQuery(string TableName, string Context = "default") : IRequest<ServiceAxis.Application.Contracts.Infrastructure.FormSchemaDto>;
+public record GetFormSchemaQuery(string TableName, string Context = "default") : IRequest<FormSchemaDto>;
 
-public class GetFormSchemaHandler : IRequestHandler<GetFormSchemaQuery, ServiceAxis.Application.Contracts.Infrastructure.FormSchemaDto>
+public class GetFormSchemaHandler : IRequestHandler<GetFormSchemaQuery, FormSchemaDto>
 {
-    private readonly ServiceAxis.Application.Contracts.Infrastructure.IFormEngineService _formEngine;
+    private readonly IFormEngineService _formEngine;
 
-    public GetFormSchemaHandler(ServiceAxis.Application.Contracts.Infrastructure.IFormEngineService formEngine) => _formEngine = formEngine;
+    public GetFormSchemaHandler(IFormEngineService formEngine) => _formEngine = formEngine;
 
-    public async Task<ServiceAxis.Application.Contracts.Infrastructure.FormSchemaDto> Handle(GetFormSchemaQuery request, CancellationToken ct)
+    public async Task<FormSchemaDto> Handle(GetFormSchemaQuery request, CancellationToken ct)
     {
         return await _formEngine.GetFormSchemaAsync(request.TableName, request.Context, ct);
     }

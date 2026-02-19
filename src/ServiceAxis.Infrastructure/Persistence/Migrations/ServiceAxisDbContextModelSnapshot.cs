@@ -220,6 +220,187 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                     b.ToTable("UserTokens", "identity");
                 });
 
+            modelBuilder.Entity("ServiceAxis.Domain.Entities.Activity.Activity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystemGenerated")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("RecordId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TableId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TableId");
+
+                    b.HasIndex("RecordId", "CreatedAt");
+
+                    b.ToTable("Activities", "platform");
+                });
+
+            modelBuilder.Entity("ServiceAxis.Domain.Entities.Activity.Attachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("RecordId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UploadedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecordId");
+
+                    b.ToTable("Attachments", "platform");
+                });
+
+            modelBuilder.Entity("ServiceAxis.Domain.Entities.Activity.Comment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ActivityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CommentText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsInternal")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("RecordId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActivityId");
+
+                    b.ToTable("Comments", "platform");
+                });
+
+            modelBuilder.Entity("ServiceAxis.Domain.Entities.Activity.FieldChange", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ActivityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("FieldId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FieldName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NewValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActivityId");
+
+                    b.ToTable("FieldChanges", "platform");
+                });
+
             modelBuilder.Entity("ServiceAxis.Domain.Entities.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -445,6 +626,9 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                     b.Property<int>("Action")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("ApplicationUserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("CorrelationId")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -494,16 +678,15 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                     b.Property<string>("UserAgent")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<Guid?>("UserId1")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId1");
+                    b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("AuditLogs", "platform");
                 });
@@ -1058,9 +1241,6 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("TableId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("TableId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid?>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1079,8 +1259,6 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TableId");
-
-                    b.HasIndex("TableId1");
 
                     b.HasIndex("WorkflowDefinitionId");
 
@@ -1118,7 +1296,7 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("RecordNumber")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("ResolvedAt")
                         .HasColumnType("datetime2");
@@ -1133,9 +1311,6 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("TableId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("TableId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid?>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1147,11 +1322,63 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TableId");
+                    b.HasIndex("RecordNumber")
+                        .IsUnique()
+                        .HasFilter("[RecordNumber] IS NOT NULL");
 
-                    b.HasIndex("TableId1");
+                    b.HasIndex("TableId", "CreatedAt");
 
                     b.ToTable("PlatformRecords");
+                });
+
+            modelBuilder.Entity("ServiceAxis.Domain.Entities.Records.RecordAudit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Action")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("FieldId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FieldName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NewValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("RecordId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecordId");
+
+                    b.ToTable("RecordAudit");
                 });
 
             modelBuilder.Entity("ServiceAxis.Domain.Entities.Records.RecordValue", b =>
@@ -1167,9 +1394,6 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("FieldId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("FieldId1")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsActive")
@@ -1191,9 +1415,7 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("FieldId");
 
-                    b.HasIndex("FieldId1");
-
-                    b.HasIndex("RecordId");
+                    b.HasIndex("RecordId", "FieldId");
 
                     b.ToTable("RecordValues");
                 });
@@ -1967,6 +2189,58 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ServiceAxis.Domain.Entities.Activity.Activity", b =>
+                {
+                    b.HasOne("ServiceAxis.Domain.Entities.Records.PlatformRecord", "Record")
+                        .WithMany()
+                        .HasForeignKey("RecordId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ServiceAxis.Domain.Entities.Platform.SysTable", "Table")
+                        .WithMany()
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Record");
+
+                    b.Navigation("Table");
+                });
+
+            modelBuilder.Entity("ServiceAxis.Domain.Entities.Activity.Attachment", b =>
+                {
+                    b.HasOne("ServiceAxis.Domain.Entities.Records.PlatformRecord", "Record")
+                        .WithMany()
+                        .HasForeignKey("RecordId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Record");
+                });
+
+            modelBuilder.Entity("ServiceAxis.Domain.Entities.Activity.Comment", b =>
+                {
+                    b.HasOne("ServiceAxis.Domain.Entities.Activity.Activity", "Activity")
+                        .WithMany("Comments")
+                        .HasForeignKey("ActivityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Activity");
+                });
+
+            modelBuilder.Entity("ServiceAxis.Domain.Entities.Activity.FieldChange", b =>
+                {
+                    b.HasOne("ServiceAxis.Domain.Entities.Activity.Activity", "Activity")
+                        .WithMany("FieldChanges")
+                        .HasForeignKey("ActivityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Activity");
+                });
+
             modelBuilder.Entity("ServiceAxis.Domain.Entities.ApplicationUser", b =>
                 {
                     b.HasOne("ServiceAxis.Domain.Entities.Tenant", "Tenant")
@@ -2001,9 +2275,14 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ServiceAxis.Domain.Entities.AuditLog", b =>
                 {
-                    b.HasOne("ServiceAxis.Domain.Entities.ApplicationUser", "User")
+                    b.HasOne("ServiceAxis.Domain.Entities.ApplicationUser", null)
                         .WithMany("AuditLogs")
-                        .HasForeignKey("UserId1")
+                        .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ServiceAxis.Domain.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("User");
@@ -2066,7 +2345,7 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                     b.HasOne("ServiceAxis.Domain.Entities.Platform.SysField", "Field")
                         .WithMany("Choices")
                         .HasForeignKey("FieldId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Field");
@@ -2095,15 +2374,9 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ServiceAxis.Domain.Entities.Platform.WorkflowTrigger", b =>
                 {
-                    b.HasOne("ServiceAxis.Domain.Entities.Platform.SysTable", null)
-                        .WithMany()
-                        .HasForeignKey("TableId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("ServiceAxis.Domain.Entities.Platform.SysTable", "Table")
                         .WithMany()
-                        .HasForeignKey("TableId1")
+                        .HasForeignKey("TableId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -2120,39 +2393,38 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ServiceAxis.Domain.Entities.Records.PlatformRecord", b =>
                 {
-                    b.HasOne("ServiceAxis.Domain.Entities.Platform.SysTable", null)
-                        .WithMany()
-                        .HasForeignKey("TableId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("ServiceAxis.Domain.Entities.Platform.SysTable", "Table")
                         .WithMany()
-                        .HasForeignKey("TableId1")
+                        .HasForeignKey("TableId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Table");
                 });
 
-            modelBuilder.Entity("ServiceAxis.Domain.Entities.Records.RecordValue", b =>
+            modelBuilder.Entity("ServiceAxis.Domain.Entities.Records.RecordAudit", b =>
                 {
-                    b.HasOne("ServiceAxis.Domain.Entities.Platform.SysField", null)
-                        .WithMany()
-                        .HasForeignKey("FieldId")
+                    b.HasOne("ServiceAxis.Domain.Entities.Records.PlatformRecord", "Record")
+                        .WithMany("Audits")
+                        .HasForeignKey("RecordId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("Record");
+                });
+
+            modelBuilder.Entity("ServiceAxis.Domain.Entities.Records.RecordValue", b =>
+                {
                     b.HasOne("ServiceAxis.Domain.Entities.Platform.SysField", "Field")
                         .WithMany()
-                        .HasForeignKey("FieldId1")
+                        .HasForeignKey("FieldId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("ServiceAxis.Domain.Entities.Records.PlatformRecord", "Record")
                         .WithMany("Values")
                         .HasForeignKey("RecordId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Field");
@@ -2276,6 +2548,13 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                     b.Navigation("ToStep");
                 });
 
+            modelBuilder.Entity("ServiceAxis.Domain.Entities.Activity.Activity", b =>
+                {
+                    b.Navigation("Comments");
+
+                    b.Navigation("FieldChanges");
+                });
+
             modelBuilder.Entity("ServiceAxis.Domain.Entities.ApplicationUser", b =>
                 {
                     b.Navigation("AuditLogs");
@@ -2312,6 +2591,8 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ServiceAxis.Domain.Entities.Records.PlatformRecord", b =>
                 {
+                    b.Navigation("Audits");
+
                     b.Navigation("Values");
                 });
 

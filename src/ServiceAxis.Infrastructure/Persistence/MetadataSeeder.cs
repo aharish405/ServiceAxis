@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ServiceAxis.Domain.Entities.Platform;
 using ServiceAxis.Domain.Entities.Forms;
+using ServiceAxis.Domain.Entities.Workflow;
 using ServiceAxis.Domain.Enums;
 
 namespace ServiceAxis.Infrastructure.Persistence;
@@ -21,6 +22,9 @@ public static class MetadataSeeder
         // 2. Service Request Table
         var request = await EnsureTableAsync(db, "service_request", "Service Request", "REQ");
         await EnsureServiceRequestFieldsAsync(db, request.Id);
+
+        // 3. Workflow Demo
+        await EnsureDefaultWorkflowAsync(db, incident.Id);
     }
 
     private static async Task<SysTable> EnsureTableAsync(ServiceAxisDbContext db, string name, string displayName, string prefix)
@@ -54,11 +58,20 @@ public static class MetadataSeeder
         {
             new() { TableId = tableId, FieldName = "title", DisplayName = "Title", DataType = FieldDataType.Text, IsRequired = true, DisplayOrder = 10 },
             new() { TableId = tableId, FieldName = "description", DisplayName = "Description", DataType = FieldDataType.LongText, DisplayOrder = 20 },
+            new() { TableId = tableId, FieldName = "category", DisplayName = "Category", DataType = FieldDataType.Choice, DisplayOrder = 25 },
             new() { TableId = tableId, FieldName = "priority", DisplayName = "Priority", DataType = FieldDataType.Choice, DisplayOrder = 30 },
             new() { TableId = tableId, FieldName = "state", DisplayName = "State", DataType = FieldDataType.Choice, DisplayOrder = 40 }
         };
         db.SysFields.AddRange(fields);
         await db.SaveChangesAsync();
+
+        // Category Choice
+        var categoryField = fields.Single(f => f.FieldName == "category");
+        db.SysChoices.AddRange(
+            new SysChoice { FieldId = categoryField.Id, Value = "software", DisplayText = "Software", Order = 10 },
+            new SysChoice { FieldId = categoryField.Id, Value = "hardware", DisplayText = "Hardware", Order = 20 },
+            new SysChoice { FieldId = categoryField.Id, Value = "network", DisplayText = "Network", Order = 30 }
+        );
 
         // Choices
         var priorityField = fields.Single(f => f.FieldName == "priority");
@@ -123,6 +136,40 @@ public static class MetadataSeeder
         if (mappings.Any())
         {
             db.FormFieldMappings.AddRange(mappings);
+            await db.SaveChangesAsync();
+        }
+    }
+
+    private static async Task EnsureDefaultWorkflowAsync(ServiceAxisDbContext db, Guid incidentTableId)
+    {
+        var wfCode = "INCIDENT_CREATION_FLOW";
+        var workflow = await db.WorkflowDefinitions.FirstOrDefaultAsync(w => w.Code == wfCode);
+        if (workflow == null)
+        {
+            workflow = new WorkflowDefinition
+            {
+                Code = wfCode,
+                Name = "Incident Creation Flow",
+                Description = "Auto-processes new incidents and logs milestones.",
+                Version = 1,
+                IsPublished = true,
+                IsActive = true
+            };
+            db.WorkflowDefinitions.Add(workflow);
+            await db.SaveChangesAsync();
+        }
+
+        // Trigger
+        if (!await db.WorkflowTriggers.AnyAsync(t => t.TableId == incidentTableId && t.WorkflowDefinitionId == workflow.Id))
+        {
+            db.WorkflowTriggers.Add(new WorkflowTrigger
+            {
+                TableId = incidentTableId,
+                WorkflowDefinitionId = workflow.Id,
+                EventType = WorkflowTriggerEvent.RecordCreated,
+                Priority = 1,
+                Status = WorkflowTriggerStatus.Active
+            });
             await db.SaveChangesAsync();
         }
     }

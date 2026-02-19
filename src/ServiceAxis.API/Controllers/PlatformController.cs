@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ServiceAxis.Application.Contracts.Identity;
+using ServiceAxis.Application.Contracts.Infrastructure;
 
 namespace ServiceAxis.API.Controllers;
 
@@ -11,8 +12,13 @@ namespace ServiceAxis.API.Controllers;
 public class PlatformController : BaseApiController
 {
     private readonly ICurrentUserService _currentUser;
+    private readonly IPermissionService _permission;
 
-    public PlatformController(ICurrentUserService currentUser) => _currentUser = currentUser;
+    public PlatformController(ICurrentUserService currentUser, IPermissionService permission)
+    {
+        _currentUser = currentUser;
+        _permission = permission;
+    }
 
     /// <summary>
     /// Returns platform information for the authenticated user.
@@ -26,11 +32,24 @@ public class PlatformController : BaseApiController
         {
             UserId        = _currentUser.UserId,
             Email         = _currentUser.Email,
+            TenantId      = _currentUser.TenantId,
+            Roles         = _currentUser.Roles,
             CorrelationId = _currentUser.CorrelationId,
             Timestamp     = DateTime.UtcNow,
             Platform      = "ServiceAxis v1.0"
         };
         return Ok(info);
+    }
+
+    /// <summary>
+    /// Returns all functional permissions granted to the current user.
+    /// </summary>
+    [HttpGet("permissions")]
+    [ProducesResponseType(200)]
+    public async Task<IActionResult> GetPermissions()
+    {
+        var permissions = await _permission.GetUserPermissionsAsync();
+        return Ok(permissions);
     }
 
     /// <summary>

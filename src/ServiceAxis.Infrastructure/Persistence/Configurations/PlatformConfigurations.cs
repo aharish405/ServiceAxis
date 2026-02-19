@@ -59,6 +59,10 @@ internal sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         builder.Property(a => a.CorrelationId).HasMaxLength(100);
         builder.Property(a => a.IpAddress).HasMaxLength(50);
         builder.Property(a => a.UserId).HasMaxLength(450);
+        builder.HasOne(a => a.User)
+               .WithMany()
+               .HasForeignKey(a => a.UserId)
+               .OnDelete(DeleteBehavior.Restrict);
 
         // Audit logs are append-only; disable updates
         builder.Property(a => a.UpdatedAt).IsRequired(false);

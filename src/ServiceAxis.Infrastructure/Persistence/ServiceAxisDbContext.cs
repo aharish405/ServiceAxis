@@ -10,21 +10,21 @@ using ServiceAxis.Domain.Entities.Platform;
 using ServiceAxis.Domain.Entities.Records;
 using ServiceAxis.Domain.Entities.Security;
 using ServiceAxis.Domain.Entities.Sla;
+using ServiceAxis.Domain.Entities.Activity;
 using ServiceAxis.Domain.Entities.Workflow;
+using ServiceAxis.Application.Contracts.Identity;
 
 namespace ServiceAxis.Infrastructure.Persistence;
 
-/// <summary>
-/// Main application DbContext combining ASP.NET Identity tables with
-/// platform domain entities. Uses schema separation to keep concerns clean:
-///   - [identity] — ASP.NET Identity tables
-///   - [platform] — Core platform entities (Tenant, Users, AuditLogs)
-///   - [workflow]  — Workflow engine entities
-/// </summary>
 public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole, string>
 {
-    public ServiceAxisDbContext(DbContextOptions<ServiceAxisDbContext> options)
-        : base(options) { }
+    private readonly ICurrentUserService _currentUser;
+
+    public ServiceAxisDbContext(DbContextOptions<ServiceAxisDbContext> options, ICurrentUserService currentUser)
+        : base(options) 
+    {
+        _currentUser = currentUser;
+    }
 
     // ── Platform entities ─────────────────────────────────────────────────
     public DbSet<Tenant> Tenants => Set<Tenant>();
@@ -76,6 +76,13 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
     public DbSet<WorkflowTransition> WorkflowTransitions => Set<WorkflowTransition>();
     public DbSet<WorkflowAction> WorkflowActions => Set<WorkflowAction>();
 
+    // ─── Activity & Collaboration ───
+    public DbSet<Activity> Activities => Set<Activity>();
+    public DbSet<FieldChange> FieldChanges => Set<FieldChange>();
+    public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<Attachment> Attachments => Set<Attachment>();
+
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -111,10 +118,16 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.Entity<PlatformRecord>()
-            .HasOne<SysTable>()
+            .HasOne(r => r.Table)
             .WithMany()
             .HasForeignKey(r => r.TableId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<PlatformRecord>()
+            .HasIndex(r => new { r.TableId, r.CreatedAt });
+        
+        builder.Entity<PlatformRecord>()
+            .HasIndex(r => r.RecordNumber).IsUnique();
 
         builder.Entity<FormDefinition>()
             .HasOne(fd => fd.Table) // Navigation prop exists
@@ -123,23 +136,106 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.Entity<WorkflowTrigger>()
-            .HasOne<SysTable>()
+            .HasOne(wt => wt.Table)
             .WithMany()
             .HasForeignKey(wt => wt.TableId)
             .OnDelete(DeleteBehavior.Restrict);
 
 
+        // --- Multi-tenancy & Soft Delete Filters ---
+        builder.Entity<PlatformRecord>().HasQueryFilter(r => !r.IsDeleted && (r.TenantId == _currentUser.TenantId || _currentUser.TenantId == null));
+        builder.Entity<WorkflowInstance>().HasQueryFilter(w => w.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
+        builder.Entity<TablePermission>().HasQueryFilter(tp => tp.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
+        builder.Entity<FieldPermission>().HasQueryFilter(fp => fp.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
+        builder.Entity<Activity>().HasQueryFilter(a => a.Record.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
+        builder.Entity<Attachment>().HasQueryFilter(a => a.Record.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
+        builder.Entity<AssignmentGroup>().HasQueryFilter(ag => ag.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
+        builder.Entity<Queue>().HasQueryFilter(q => q.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
+        builder.Entity<NotificationTemplate>().HasQueryFilter(nt => nt.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
+        builder.Entity<NotificationLog>().HasQueryFilter(nl => nl.TenantId == _currentUser.TenantId || _currentUser.TenantId == null);
+
+
+
 
         // RecordValue dependencies
         builder.Entity<RecordValue>()
-            .HasOne<SysField>()
+            .HasOne(v => v.Record)
+            .WithMany(r => r.Values)
+            .HasForeignKey(v => v.RecordId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<RecordValue>()
+            .HasOne(v => v.Field)
             .WithMany()
             .HasForeignKey(v => v.FieldId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Fix multiple cascade paths (SQL Server error 1785) & Enforce strict delete safety
+        builder.Entity<RecordValue>()
+            .HasIndex(v => new { v.RecordId, v.FieldId });
+
+        builder.Entity<RecordAudit>()
+            .HasOne(ra => ra.Record)
+            .WithMany(r => r.Audits)
+            .HasForeignKey(ra => ra.RecordId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ─── Activity System Configuration ───
+        builder.Entity<Activity>().ToTable("Activities", "platform");
+        builder.Entity<FieldChange>().ToTable("FieldChanges", "platform");
+        builder.Entity<Comment>().ToTable("Comments", "platform");
+        builder.Entity<Attachment>().ToTable("Attachments", "platform");
+
+        builder.Entity<Activity>()
+            .HasOne(a => a.Table)
+            .WithMany()
+            .HasForeignKey(a => a.TableId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Activity>()
+            .HasIndex(a => new { a.RecordId, a.CreatedAt });
+
+        builder.Entity<FieldChange>()
+            .HasOne(f => f.Activity)
+            .WithMany(a => a.FieldChanges)
+            .HasForeignKey(f => f.ActivityId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Comment>()
+            .HasOne(c => c.Activity)
+            .WithMany(a => a.Comments)
+            .HasForeignKey(c => c.ActivityId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Attachment>()
+            .HasOne(a => a.Record)
+            .WithMany()
+            .HasForeignKey(a => a.RecordId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+
+
+        // Fix multiple cascade paths (SQL Server error 1785)
         foreach (var relationship in builder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))
         {
+            // Keep Cascade for ownership relationships
+            if (relationship.DeclaringEntityType.ClrType == typeof(RecordValue) && relationship.PrincipalEntityType.ClrType == typeof(PlatformRecord))
+                continue;
+
+            if (relationship.DeclaringEntityType.ClrType == typeof(SysChoice) && relationship.PrincipalEntityType.ClrType == typeof(SysField))
+                continue;
+
+            if (relationship.DeclaringEntityType.ClrType == typeof(FieldChange) && relationship.PrincipalEntityType.ClrType == typeof(Activity))
+                continue;
+
+            if (relationship.DeclaringEntityType.ClrType == typeof(Comment) && relationship.PrincipalEntityType.ClrType == typeof(Activity))
+                continue;
+
+            if (relationship.DeclaringEntityType.ClrType == typeof(Activity) && (relationship.PrincipalEntityType.ClrType == typeof(PlatformRecord) || relationship.PrincipalEntityType.ClrType == typeof(SysTable)))
+                continue;
+
+            if (relationship.DeclaringEntityType.ClrType == typeof(Attachment) && relationship.PrincipalEntityType.ClrType == typeof(PlatformRecord))
+                continue;
+
             relationship.DeleteBehavior = DeleteBehavior.Restrict;
         }
     }

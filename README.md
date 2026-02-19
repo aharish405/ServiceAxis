@@ -29,10 +29,10 @@
 
 | Module | Status |
 |--------|--------|
-| Identity (Auth/RBAC) | ✅ Complete |
-| Workflow Core Engine | ✅ Complete |
-| Notification Abstraction | ✅ Placeholder |
 | Audit Logging | ✅ Complete |
+| Activity Stream / Collaboration | ✅ Complete |
+| Multi-Tenancy (Data Isolation) | ✅ Complete |
+| Granular RBAC (Table/Field) | ✅ Complete |
 | ITSM / Incident Management | 🔜 Roadmap |
 | Asset Management | 🔜 Roadmap |
 | WorkAxis (HRMS) Integration | 🔜 Roadmap |
@@ -261,6 +261,21 @@ ServiceAxis uses **JWT Bearer tokens** with role-based and policy-based authoriz
 | `AgentUp` | SuperAdmin, Admin, Manager, Agent |
 | `AnyAuthenticated` | Any authenticated user |
 
+### Multi-Tenancy Isolation
+
+ServiceAxis implements **Horizontal Data Isolation** using EF Core **Global Query Filters**. 
+- Every query is transparently filtered by the `TenantId` of the authenticated user.
+- Metadata (Tables, Fields, Forms) is also tenant-aware via the `MetadataCache`.
+- Cross-tenant data leakage is prevented at the database driver level.
+
+### Granular RBAC (Table & Field Level)
+
+The platform provides a highly flexible security model beyond just roles:
+- **Table Permissions:** Control `Create`, `Read`, `Write`, `Delete`, and `Admin` access per table (e.g., "incident", "change_request").
+- **Field Permissions:** Control `Read` and `Write` visibility for individual fields (e.g., "priority", "calculated_cost").
+- **Internal Note Privacy:** Activity timeline entries tagged as `IsInternal` are hidden from users without the `platform.activity.internal_notes` permission.
+- **Permission Service:** Unified `IPermissionService` for checking accessibility in business logic and UI.
+
 ### Usage in Swagger
 
 1. Call `POST /api/Auth/login` to get an `accessToken`
@@ -286,6 +301,26 @@ WorkflowDefinition  (blueprint/template)
 WorkflowInstance    (live execution)
        └── WorkflowActions  (full audit trail of every step action)
 ```
+
+### Event-Driven Triggers
+
+Workflows can be triggered automatically based on record mutations:
+- **RecordCreated:** Fire a flow when a new record appears.
+- **RecordUpdated / FieldChanged:** Fire a flow when specific values change (e.g., Priority becomes "Critical").
+- **Activity Integration:** Every workflow start/milestone is automatically logged to the record's **Activity Stream** (Timeline), providing visibility into automated platform actions.
+
+---
+
+## Universal Activity Stream
+
+ServiceAxis features a unified collaboration and audit timeline for every record:
+- **Automatic Auditing:** Logs every field change, state transition, and creation event.
+- **Collaboration:** Supports user comments and internal "Work Notes" (auditable and secured).
+- **Attachments:** Secure file storage integrated into the timeline.
+- **System Events:** Workflow executions and SLA milestones are interleaved into the history.
+- **EAV Integration:** Fully compatible with the dynamic metadata-driven record engine.
+
+---
 
 ### Example: Create an ITSM Incident Approval Workflow
 
@@ -346,10 +381,13 @@ The `ICacheService` abstraction is production-ready. Swap `MemoryCacheService` f
 - [ ] Notification delivery (SendGrid / Azure Communication Services)
 - [ ] Redis cache implementation
 - [ ] WorkAxis (HRMS) integration hooks
-- [ ] Multi-tenancy enforcement middleware
 - [ ] OpenTelemetry / distributed tracing
 - [ ] Docker + docker-compose support
 - [ ] Azure AD / OIDC integration
+- [x] Multi-tenancy enforcement (Query Filters)
+- [x] Granular RBAC implementation
+- [x] Activity Stream foundation
+- [x] Workflow Trigger integration
 
 ---
 

@@ -5,7 +5,7 @@ using ServiceAxis.Application.Features.Metadata.Queries;
 namespace ServiceAxis.API.Controllers;
 
 [ApiController]
-[Route("api/metadata")]
+[Route("api/v1/metadata")]
 public class MetadataController : ControllerBase
 {
     private readonly ISender _sender;

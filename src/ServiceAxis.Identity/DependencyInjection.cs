@@ -60,6 +60,7 @@ public static class DependencyInjection
         // ── Application contracts ──────────────────────────────────────────
         services.AddHttpContextAccessor();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
 
         return services;

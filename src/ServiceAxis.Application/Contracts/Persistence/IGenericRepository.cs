@@ -11,6 +11,7 @@ namespace ServiceAxis.Application.Contracts.Persistence;
 public interface IGenericRepository<T> where T : BaseEntity
 {
     // ---------- Queries ----------
+    IQueryable<T> AsQueryable();
 
     /// <summary>Returns all active entities (IsActive = true) in the set.</summary>
     Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default);

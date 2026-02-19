@@ -60,11 +60,16 @@ public static class DependencyInjection
         // ─── Metadata & Record Engine ───
         services.AddScoped<ISysTableRepository, SysTableRepository>();
         services.AddScoped<ISysFieldRepository, SysFieldRepository>();
+        services.AddScoped<IFormRepository, FormRepository>();
         services.AddScoped<IRecordRepository, RecordRepository>();
         services.AddScoped<IRecordValueRepository, RecordValueRepository>();
+        services.AddScoped<IMetadataCache, MetadataCache>();
 
         // ─── Platform Services ───
-        services.AddScoped<IFormEngineService, FormEngineService>();
+        services.AddScoped<IActivityService, ActivityService>();
+        services.AddScoped<IPermissionService, PermissionService>();
+        services.AddScoped<IWorkflowEngine, WorkflowEngine>();
+        services.AddScoped<IFileStorageProvider, LocalFileStorageProvider>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<ISlaService, SlaService>();
         services.AddScoped<IAssignmentService, AssignmentService>();

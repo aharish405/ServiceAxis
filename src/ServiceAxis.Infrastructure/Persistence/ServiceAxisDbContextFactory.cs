@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
+using ServiceAxis.Application.Contracts.Identity;
 
 namespace ServiceAxis.Infrastructure.Persistence;
 
@@ -36,6 +37,17 @@ public sealed class ServiceAxisDbContextFactory : IDesignTimeDbContextFactory<Se
         optionsBuilder.UseSqlServer(connectionString,
             sql => sql.MigrationsAssembly(typeof(ServiceAxisDbContext).Assembly.FullName));
 
-        return new ServiceAxisDbContext(optionsBuilder.Options);
+        return new ServiceAxisDbContext(optionsBuilder.Options, new DesignTimeCurrentUserService());
+    }
+
+    private class DesignTimeCurrentUserService : ICurrentUserService
+    {
+        public string? UserId => null;
+        public string? Email => null;
+        public bool IsAuthenticated => false;
+        public string? CorrelationId => null;
+        public Guid? TenantId => null;
+        public IEnumerable<string> Roles => Enumerable.Empty<string>();
+        public bool IsInRole(string role) => false;
     }
 }

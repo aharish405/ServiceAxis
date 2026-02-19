@@ -53,4 +53,5 @@ public class PlatformRecord : BaseEntity
 
     // Navigation
     public ICollection<RecordValue> Values { get; set; } = new List<RecordValue>();
+    public ICollection<RecordAudit> Audits { get; set; } = new List<RecordAudit>();
 }

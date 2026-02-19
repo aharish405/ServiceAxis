@@ -34,4 +34,12 @@ public sealed class CurrentUserService : ICurrentUserService
 
     /// <inheritdoc />
     public bool IsInRole(string role) => User?.IsInRole(role) ?? false;
+
+    /// <inheritdoc />
+    public IEnumerable<string> Roles => User?.Claims
+        .Where(c => c.Type == ClaimTypes.Role)
+        .Select(c => c.Value) ?? Enumerable.Empty<string>();
+
+    /// <inheritdoc />
+    public Guid? TenantId => Guid.TryParse(User?.FindFirstValue("tenant_id"), out var tid) ? tid : null;
 }
