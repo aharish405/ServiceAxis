@@ -1,0 +1,6 @@
+@ServiceAxis.API_HostAddress = http://localhost:5170
+
+GET {{ServiceAxis.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
