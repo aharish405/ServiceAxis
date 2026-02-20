@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { api } from '../services/api';
 
 // --- Types & Interfaces ---
 export type FormContextType = 'Create' | 'Edit' | 'View' | 'All';
@@ -143,14 +144,13 @@ export function useDynamicForm(tableId: string, initialContext: string = 'defaul
   const loadMetadata = useCallback(async () => {
     setIsLoading(true);
     try {
-      // In a real app, this would use a globally configured axios/fetch instance
-      const response = await fetch(`/api/v1/ui-rules/${tableId}?context=${initialContext}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      // Use the centralized api instance for automatic unwrapping
+      const data = await api.get<UiMetadataPayload>(`/ui-rules/${tableId}`, {
+        params: { context: initialContext }
       });
-      if (!response.ok) throw new Error("Failed to load form metadata.");
-      const data: UiMetadataPayload = await response.json();
-      setMetadata(data);
-      initializeFieldStates(data);
+      
+      setMetadata(data as any);
+      initializeFieldStates(data as any);
     } catch (err: any) {
       setError(err.message);
     } finally {

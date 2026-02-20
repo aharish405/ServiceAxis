@@ -22,8 +22,8 @@ public class MetadataController : ControllerBase
     // ─── Tables ───────────────────────────────────────────────────────────────
 
     /// <summary>Returns a paged list of all registered platform tables.</summary>
+    [AllowAnonymous]
     [HttpGet("tables")]
-    [Authorize(Policy = "AgentUp")]
     public async Task<IActionResult> ListTables([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var result = await _sender.Send(new ListSysTablesQuery(page, pageSize));
@@ -31,8 +31,8 @@ public class MetadataController : ControllerBase
     }
 
     /// <summary>Returns the full schema (table + all fields) for a specific table.</summary>
+    [AllowAnonymous]
     [HttpGet("tables/{name}")]
-    [Authorize(Policy = "AgentUp")]
     public async Task<IActionResult> GetTableSchema(string name)
     {
         var result = await _sender.Send(new GetTableSchemaQuery(name));
@@ -73,8 +73,8 @@ public class MetadataController : ControllerBase
     // ─── Forms ────────────────────────────────────────────────────────────────
 
     /// <summary>Returns the JSON form schema for a table and context (used by frontend auto-renderer).</summary>
+    [AllowAnonymous]
     [HttpGet("forms/{table}")]
-    [Authorize(Policy = "AgentUp")]
     public async Task<IActionResult> GetFormSchema(string table, [FromQuery] string context = "default")
     {
         var result = await _sender.Send(new GetFormSchemaQuery(table, context));

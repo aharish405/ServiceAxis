@@ -11,13 +11,13 @@ public static class DynamicUISeeder
     {
         if (await db.UiPolicies.AnyAsync()) return;
 
-        var incidentTable = await db.SysTables.FirstOrDefaultAsync(t => t.Name == "Incident");
+        var incidentTable = await db.SysTables.FirstOrDefaultAsync(t => t.Name == "incident");
         if (incidentTable == null) return;
 
-        var priorityField = await db.SysFields.FirstOrDefaultAsync(f => f.TableId == incidentTable.Id && f.FieldName == "Priority");
-        var groupField = await db.SysFields.FirstOrDefaultAsync(f => f.TableId == incidentTable.Id && f.FieldName == "AssignmentGroupId");
+        var priorityField = await db.SysFields.FirstOrDefaultAsync(f => f.TableId == incidentTable.Id && f.FieldName == "priority");
+        var titleField = await db.SysFields.FirstOrDefaultAsync(f => f.TableId == incidentTable.Id && f.FieldName == "title");
 
-        if (priorityField != null && groupField != null)
+        if (priorityField != null && titleField != null)
         {
             // Seed a UI Policy: If Priority = 1, Show and Mandatory Group
             var highPriorityPolicy = new UiPolicy
@@ -39,7 +39,7 @@ public static class DynamicUISeeder
                 Actions = [
                     new UiPolicyAction
                     {
-                        TargetFieldId = groupField.Id,
+                        TargetFieldId = titleField.Id,
                         ActionType = UiPolicyActionType.MakeMandatory
                     }
                 ]
@@ -54,7 +54,7 @@ public static class DynamicUISeeder
                 TableId = incidentTable.Id,
                 EventType = ClientScriptEventType.OnChange,
                 TriggerFieldId = priorityField.Id,
-                ScriptCode = "function invoke(form) { if (form.getValue('Priority') === '1') { alert('Warning: Escalate Critical Priority Immediately.'); } }",
+                ScriptCode = "function invoke(form) { if (form.getValue('priority') === '1') { alert('Warning: Escalate Critical Priority Immediately.'); } }",
                 ExecutionOrder = 300
             };
             db.ClientScripts.Add(alertScript);

@@ -17,6 +17,7 @@ public class RecordController : BaseApiController
 
     public RecordController(ISender sender) => _sender = sender;
 
+    [AllowAnonymous]
     [HttpPost("{table}")]
     public async Task<IActionResult> Create(string table, [FromBody] Dictionary<string, string?> values, [FromQuery] Guid? tenantId, CancellationToken ct)
     {
@@ -24,6 +25,7 @@ public class RecordController : BaseApiController
         return Created(result);
     }
 
+    [AllowAnonymous]
     [HttpGet("{table}/{id:guid}")]
     public async Task<IActionResult> Get(string table, Guid id, CancellationToken ct)
     {
@@ -46,6 +48,7 @@ public class RecordController : BaseApiController
         return Ok<object>(null!, "Record deleted successfully.");
     }
 
+    [AllowAnonymous]
     [HttpGet("{table}")]
     public async Task<IActionResult> List(string table, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
@@ -64,6 +67,7 @@ public class RecordController : BaseApiController
         return Ok<object>(new { id }, "Record assigned successfully.");
     }
 
+    [AllowAnonymous]
     [HttpGet("{table}/{id:guid}/activities")]
     public async Task<IActionResult> GetActivities(string table, Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {

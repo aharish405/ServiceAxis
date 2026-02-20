@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { api } from '../services/api';
 
 export interface RecordSummaryDto {
   id: string;
@@ -28,18 +29,15 @@ export function useDynamicRecords(tableName: string, initialPage: number = 1, pa
     setError(null);
 
     try {
-      const res = await fetch(`/api/v1/records/${tableName}?page=${currentPage}&pageSize=${pageSize}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+      // Use the centralized api instance which handles unwrapping
+      const result = await api.get<PagedResult<RecordSummaryDto>>(`/records/${tableName}`, {
+        params: {
+          page: currentPage,
+          pageSize: pageSize
         }
       });
       
-      if (!res.ok) {
-        throw new Error(`Failed to fetch records. Status: ${res.status}`);
-      }
-
-      const result: PagedResult<RecordSummaryDto> = await res.json();
-      setData(result);
+      setData(result as any); // Type cast due to interceptor unwrapping
     } catch (err: any) {
       setError(err.message || "An error occurred fetching records.");
     } finally {

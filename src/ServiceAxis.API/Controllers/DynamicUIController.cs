@@ -23,9 +23,20 @@ public class DynamicUIController : BaseApiController
     /// Fetches the completely aggregated dynamic UI metadata payload (form layout + rules) 
     /// for a specific table. This endpoint is called heavily by the Form rendering engine.
     /// </summary>
-    [HttpGet("{tableId:guid}")]
-    public async Task<IActionResult> GetUiMetadata(Guid tableId, [FromQuery] string context = "default", CancellationToken ct = default)
+    [AllowAnonymous]
+    [HttpGet("{identifier}")]
+    public async Task<IActionResult> GetUiMetadata(string identifier, [FromQuery] string context = "default", CancellationToken ct = default)
     {
+        Guid tableId;
+        if (!Guid.TryParse(identifier, out tableId))
+        {
+            // Resolve table by code (name)
+            var metadataCache = HttpContext.RequestServices.GetRequiredService<ServiceAxis.Application.Contracts.Infrastructure.IMetadataCache>();
+            var table = await metadataCache.GetTableAsync(identifier, ct);
+            if (table == null) return NotFound($"Table with identifier '{identifier}' not found.");
+            tableId = table.Id;
+        }
+
         var result = await _sender.Send(new GetUiMetadataQuery(tableId, context), ct);
         return Ok(result);
     }
