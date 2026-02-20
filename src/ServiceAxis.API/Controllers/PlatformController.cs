@@ -11,6 +11,7 @@ namespace ServiceAxis.API.Controllers;
 /// Platform API — user context, permissions, and platform health statistics.
 /// </summary>
 [Authorize]
+[Route("api/v1/platform")]
 public class PlatformController : BaseApiController
 {
     private readonly ICurrentUserService _currentUser;

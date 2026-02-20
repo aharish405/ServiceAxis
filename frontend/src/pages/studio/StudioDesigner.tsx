@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DynamicFormRenderer } from '../../components/dynamic/DynamicFormRenderer';
 import { UiRuleDesigner } from './UiRuleDesigner';
+import { api } from '../../services/api';
 
 interface SysFieldDto {
   id: string;
@@ -38,12 +39,8 @@ export const StudioDesigner: React.FC = () => {
 
   const loadSchema = async () => {
     try {
-      const res = await fetch(`/api/v1/metadata/tables/${tableName}/schema`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (res.ok) {
-        setTable(await res.json());
-      }
+      const data = await api.get(`/metadata/tables/${tableName}`) as unknown as SysTableDto;
+      setTable(data);
     } catch (e) {
       console.error(e);
     }
@@ -56,23 +53,13 @@ export const StudioDesigner: React.FC = () => {
   const handleAddField = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch(`/api/v1/metadata/tables/${tableName}/fields`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newField)
-      });
-      if (res.ok) {
-        setIsAddingField(false);
-        setNewField({ dataType: 'Text', isRequired: false });
-        await loadSchema();
-      } else {
-        alert("Failed to add field. " + await res.text());
-      }
-    } catch (e) {
+      await api.post(`/metadata/tables/${tableName}/fields`, newField);
+      setIsAddingField(false);
+      setNewField({ dataType: 'Text', isRequired: false });
+      await loadSchema();
+    } catch (e: any) {
       console.error(e);
+      alert("Failed to add field. " + (e.response?.data?.message || e.message));
     }
   };
 
@@ -100,23 +87,13 @@ export const StudioDesigner: React.FC = () => {
     };
 
     try {
-      const res = await fetch(`/api/v1/ui-rules/layout/${table.id}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(layoutPayload)
-      });
-      if (res.ok) {
-        alert("Schema and Layout Published Successfully!");
-        // We force standard ui refresh via the component cache busting
-        setActiveTab('preview');
-      } else {
-        alert("Failed to publish layout. " + await res.text());
-      }
-    } catch (e) {
+      await api.post(`/ui-rules/layout/${table.id}`, layoutPayload);
+      alert("Schema and Layout Published Successfully!");
+      // We force standard ui refresh via the component cache busting
+      setActiveTab('preview');
+    } catch (e: any) {
       console.error(e);
+      alert("Failed to publish layout. " + (e.response?.data?.message || e.message));
     }
   };
 

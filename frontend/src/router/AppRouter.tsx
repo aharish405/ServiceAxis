@@ -12,7 +12,7 @@ import { AppShell } from '../components/layout/AppShell';
 
 // Placeholder Home/Dashboard component
 const Dashboard: React.FC = () => (
-    <div className="space-y-6">
+    <div className="p-8 max-w-[1600px] mx-auto min-h-[calc(100vh-64px)] space-y-6">
         <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Platform Command Center</h1>
             <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
@@ -63,7 +63,24 @@ export const AppRouter: React.FC = () => {
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         
-        {/* Protected Application Routes */}
+        {/* Studio Operations (Admin Protected, Full Screen canvas - no global AppShell) */}
+        <Route path="/app/studio" element={
+          <ProtectedRoute requiredRoles={['Admin', 'SuperAdmin']}>
+            <StudioHub />
+          </ProtectedRoute>
+        } />
+        <Route path="/app/studio/designer/:tableName" element={
+          <ProtectedRoute requiredRoles={['Admin', 'SuperAdmin']}>
+            <StudioDesigner />
+          </ProtectedRoute>
+        } />
+        <Route path="/app/studio/workflow/:id" element={
+          <ProtectedRoute requiredRoles={['Admin', 'SuperAdmin']}>
+            <WorkflowDesigner />
+          </ProtectedRoute>
+        } />
+
+        {/* Protected Application Routes (with AppShell) */}
         <Route path="/*" element={
           <ProtectedRoute>
             <AppShell>
@@ -74,23 +91,6 @@ export const AppRouter: React.FC = () => {
                 <Route path="app/:tableName/new" element={<DynamicFormPage />} />
                 <Route path="app/:tableName/:recordId" element={<DynamicFormPage />} />
                 <Route path="app/:tableName" element={<DynamicRecordList />} />
-                
-                {/* Studio (Admin Protected) */}
-                <Route path="app/studio" element={
-                  <ProtectedRoute requiredRoles={['Admin', 'SuperAdmin']}>
-                    <StudioHub />
-                  </ProtectedRoute>
-                } />
-                <Route path="app/studio/designer/:tableName" element={
-                  <ProtectedRoute requiredRoles={['Admin', 'SuperAdmin']}>
-                    <StudioDesigner />
-                  </ProtectedRoute>
-                } />
-                <Route path="app/studio/workflow/:id" element={
-                  <ProtectedRoute requiredRoles={['Admin', 'SuperAdmin']}>
-                    <WorkflowDesigner />
-                  </ProtectedRoute>
-                } />
 
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

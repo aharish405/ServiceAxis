@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../../services/api';
 
 interface TableDto {
   id: string;
@@ -36,13 +37,8 @@ export const StudioHub: React.FC = () => {
   const fetchTables = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch('/api/v1/metadata/tables?pageSize=50', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTables(data.items || []);
-      }
+      const res = await api.get('/metadata/tables?pageSize=50') as any;
+      setTables(res.items || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -58,28 +54,18 @@ export const StudioHub: React.FC = () => {
     e.preventDefault();
     try {
       setIsCreating(true);
-      const res = await fetch('/api/v1/metadata/tables', {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-      
-      if (res.ok) {
-        setShowModal(false);
-        await fetchTables();
-        navigate(`/app/studio/designer/${formData.name}`);
-      } else {
-        alert("Failed to create table. " + await res.text());
-      }
-    } catch (err) {
+      await api.post('/metadata/tables', formData);
+      setShowModal(false);
+      await fetchTables();
+      navigate(`/app/studio/designer/${formData.name}`);
+    } catch (err: any) {
       console.error(err);
+      alert("Failed to create table. " + (err.response?.data?.message || err.message));
     } finally {
       setIsCreating(false);
     }
   };
+
 
   // Convert Display Name to backend 'name' safely
   const handleNameChange = (val: string) => {

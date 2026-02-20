@@ -23,7 +23,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => {
     // If the response follows our ApiResponse envelope, return the payload
-    if (response.data && Object.prototype.hasOwnProperty.call(response.data, 'success')) {
+    if (response.data && Object.prototype.hasOwnProperty.call(response.data, 'succeeded')) {
       return response.data.data;
     }
     return response.data;

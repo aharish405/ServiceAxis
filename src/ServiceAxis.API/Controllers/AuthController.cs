@@ -6,6 +6,7 @@ namespace ServiceAxis.API.Controllers;
 /// <summary>
 /// Authentication controller — login, register, refresh, and revoke endpoints.
 /// </summary>
+[Route("api/v1/auth")]
 public class AuthController : BaseApiController
 {
     private readonly IAuthService _authService;

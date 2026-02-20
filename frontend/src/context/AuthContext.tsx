@@ -62,10 +62,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initAuth = async () => {
       if (token) {
         try {
-          // You could optionally call /user/me here to sync state
-          // const profile = await authService.getCurrentUser();
-          // setUser(profile);
+          // Sync state with server on load
+          const profile = await authService.getCurrentUser();
+          setUser(profile);
+          localStorage.setItem('user', JSON.stringify(profile));
         } catch (e) {
+          console.error("Session sync failed", e);
           logout();
         }
       }

@@ -17,13 +17,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         <Sidebar isCollapsed={isSidebarCollapsed} />
         
         <main 
-          className={`flex-1 min-w-0 transition-all duration-300 ease-in-out ${
+          className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${
             isSidebarCollapsed ? 'ml-20' : 'ml-72'
           }`}
         >
-          <div className="p-8 max-w-[1600px] mx-auto min-h-[calc(100vh-64px)]">
-             {children}
-          </div>
+          {children}
         </main>
       </div>
     </div>
