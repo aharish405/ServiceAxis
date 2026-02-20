@@ -129,6 +129,8 @@ try
                 var slaDb = slaScope.ServiceProvider.GetRequiredService<ServiceAxisDbContext>();
                 await new SlaSeeder(slaDb).SeedAsync(CancellationToken.None);
             }
+            logger.LogInformation("Seeding Automation rules...");
+            await AutomationSeeder.SeedAsync(db);
             logger.LogInformation("Database ready.");
         }
         catch (Exception ex)

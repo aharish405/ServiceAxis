@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ServiceAxis.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using ServiceAxis.Infrastructure.Persistence;
 namespace ServiceAxis.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ServiceAxisDbContext))]
-    partial class ServiceAxisDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260220022941_AddAutomationModule")]
+    partial class AddAutomationModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
