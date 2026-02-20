@@ -27,7 +27,10 @@ public record WorkflowStepDto(
     int Order,
     bool IsInitial,
     bool IsTerminal,
-    string? RequiredRole);
+    string? RequiredRole,
+    string? Configuration,
+    double? X,
+    double? Y);
 
 public class AddWorkflowStepHandler : IRequestHandler<AddWorkflowStepCommand, WorkflowStepDto>
 {
@@ -73,7 +76,8 @@ public class AddWorkflowStepHandler : IRequestHandler<AddWorkflowStepCommand, Wo
         await _uow.SaveChangesAsync(ct);
 
         return new WorkflowStepDto(step.Id, step.DefinitionId, step.Code, step.Name,
-            step.StepType, step.Order, step.IsInitial, step.IsTerminal, step.RequiredRole);
+            step.StepType, step.Order, step.IsInitial, step.IsTerminal, step.RequiredRole,
+            step.Configuration, step.X, step.Y);
     }
 }
 
@@ -111,7 +115,8 @@ public class UpdateWorkflowStepHandler : IRequestHandler<UpdateWorkflowStepComma
         await _uow.SaveChangesAsync(ct);
 
         return new WorkflowStepDto(step.Id, step.DefinitionId, step.Code, step.Name,
-            step.StepType, step.Order, step.IsInitial, step.IsTerminal, step.RequiredRole);
+            step.StepType, step.Order, step.IsInitial, step.IsTerminal, step.RequiredRole,
+            step.Configuration, step.X, step.Y);
     }
 }
 

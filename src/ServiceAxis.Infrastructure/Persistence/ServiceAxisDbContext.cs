@@ -46,7 +46,6 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
     public DbSet<FormSection> FormSections => Set<FormSection>();
     public DbSet<FormFieldMapping> FormFieldMappings => Set<FormFieldMapping>();
 
-    // ─── Workflow & Triggers ───
     public DbSet<WorkflowTrigger> WorkflowTriggers => Set<WorkflowTrigger>();
 
     // ─── Security (RBAC) ───
@@ -83,6 +82,8 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
     public DbSet<WorkflowStep> WorkflowSteps => Set<WorkflowStep>();
     public DbSet<WorkflowTransition> WorkflowTransitions => Set<WorkflowTransition>();
     public DbSet<WorkflowAction> WorkflowActions => Set<WorkflowAction>();
+    public DbSet<WorkflowTask> WorkflowTasks => Set<WorkflowTask>();
+
 
     // ─── Activity & Collaboration ───
     public DbSet<Activity> Activities => Set<Activity>();

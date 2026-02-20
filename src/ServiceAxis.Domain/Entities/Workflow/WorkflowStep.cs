@@ -35,6 +35,12 @@ public class WorkflowStep : BaseEntity
     /// <summary>Gets or sets optional JSON configuration specific to this step type.</summary>
     public string? Configuration { get; set; }
 
+    /// <summary>Visual coordinate X for designers.</summary>
+    public double? X { get; set; }
+    
+    /// <summary>Visual coordinate Y for designers.</summary>
+    public double? Y { get; set; }
+
     // Navigation
     public WorkflowDefinition? Definition { get; set; }
     public ICollection<WorkflowTransition> OutgoingTransitions { get; set; } = [];

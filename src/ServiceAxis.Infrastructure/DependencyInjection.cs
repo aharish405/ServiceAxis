@@ -11,6 +11,7 @@ using ServiceAxis.Infrastructure.Persistence;
 using ServiceAxis.Infrastructure.Persistence.Repositories;
 using ServiceAxis.Infrastructure.Services;
 using ServiceAxis.Infrastructure.Services.Automation;
+using ServiceAxis.Infrastructure.Services.Workflow.Handlers;
 
 namespace ServiceAxis.Infrastructure;
 
@@ -70,6 +71,9 @@ public static class DependencyInjection
         services.AddScoped<IActivityService, ActivityService>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IWorkflowEngine, WorkflowEngine>();
+        services.AddScoped<IWorkflowStepHandler, UpdateFieldHandler>();
+        services.AddScoped<IWorkflowStepHandler, ApprovalHandler>();
+        services.AddScoped<IWorkflowStepHandler, ConditionHandler>();
         services.AddScoped<IFileStorageProvider, LocalFileStorageProvider>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<ISlaService, SlaService>();

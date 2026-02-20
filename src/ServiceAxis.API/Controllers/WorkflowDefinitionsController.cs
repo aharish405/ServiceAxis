@@ -56,6 +56,16 @@ public class WorkflowDefinitionsController : BaseApiController
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
+    /// <summary>Bulk synchronizes the entire workflow graph (steps and transitions).</summary>
+    [HttpPost("{id:guid}/sync")]
+    [Authorize(Policy = "ManagerUp")]
+    public async Task<IActionResult> Sync(Guid id, [FromBody] SyncWorkflowRequest request, CancellationToken ct)
+    {
+        var command = new SyncWorkflowDefinitionCommand(id, request.Steps, request.Transitions);
+        await _mediator.Send(command, ct);
+        return NoContent();
+    }
+
     // ─── Steps ───────────────────────────────────────────────────────────────
 
     /// <summary>Lists all steps for a workflow definition.</summary>
@@ -193,3 +203,7 @@ public record AddTransitionRequest(
     string TriggerEvent,
     string? Condition,
     int Priority);
+
+public record SyncWorkflowRequest(
+    List<SyncStepDto> Steps,
+    List<SyncTransitionDto> Transitions);

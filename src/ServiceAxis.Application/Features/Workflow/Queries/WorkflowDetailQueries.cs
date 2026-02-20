@@ -31,7 +31,9 @@ public record WorkflowStepDetailDto(
     bool IsInitial,
     bool IsTerminal,
     string? RequiredRole,
-    string? Configuration);
+    string? Configuration,
+    double? X,
+    double? Y);
 
 public record WorkflowTransitionDetailDto(
     Guid Id,
@@ -68,7 +70,8 @@ public class GetWorkflowDefinitionHandler : IRequestHandler<GetWorkflowDefinitio
             def.Version, def.IsPublished, def.IsActive, def.CreatedAt,
             steps.OrderBy(s => s.Order).Select(s => new WorkflowStepDetailDto(
                 s.Id, s.Code, s.Name, s.StepType, s.Order,
-                s.IsInitial, s.IsTerminal, s.RequiredRole, s.Configuration)).ToList(),
+                s.IsInitial, s.IsTerminal, s.RequiredRole, s.Configuration,
+                s.X, s.Y)).ToList(),
             transitions.OrderBy(t => t.Priority).Select(t => new WorkflowTransitionDetailDto(
                 t.Id, t.FromStepId,
                 stepLookup.GetValueOrDefault(t.FromStepId, ""),
@@ -95,7 +98,8 @@ public class GetWorkflowStepsHandler : IRequestHandler<GetWorkflowStepsQuery, IR
 
         return steps.OrderBy(s => s.Order)
             .Select(s => new WorkflowStepDetailDto(s.Id, s.Code, s.Name, s.StepType, s.Order,
-                s.IsInitial, s.IsTerminal, s.RequiredRole, s.Configuration))
+                s.IsInitial, s.IsTerminal, s.RequiredRole, s.Configuration,
+                s.X, s.Y))
             .ToList();
     }
 }
