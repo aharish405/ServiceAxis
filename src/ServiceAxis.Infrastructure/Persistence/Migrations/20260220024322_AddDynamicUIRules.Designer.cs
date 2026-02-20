@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ServiceAxis.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using ServiceAxis.Infrastructure.Persistence;
 namespace ServiceAxis.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ServiceAxisDbContext))]
-    partial class ServiceAxisDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260220024322_AddDynamicUIRules")]
+    partial class AddDynamicUIRules
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1102,9 +1105,6 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("Version")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("TableId");
@@ -1161,9 +1161,6 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
                     b.Property<string>("ValueExpression")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Version")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -1368,9 +1365,6 @@ namespace ServiceAxis.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Version")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 

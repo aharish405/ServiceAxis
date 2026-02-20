@@ -131,6 +131,8 @@ try
             }
             logger.LogInformation("Seeding Automation rules...");
             await AutomationSeeder.SeedAsync(db);
+            logger.LogInformation("Seeding Dynamic UI Engine policies...");
+            await DynamicUISeeder.SeedAsync(db);
             logger.LogInformation("Database ready.");
         }
         catch (Exception ex)

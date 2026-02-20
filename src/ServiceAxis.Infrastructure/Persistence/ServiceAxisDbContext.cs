@@ -97,6 +97,13 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
     public DbSet<AutomationAction> AutomationActions => Set<AutomationAction>();
     public DbSet<AutomationExecutionLog> AutomationExecutionLogs => Set<AutomationExecutionLog>();
 
+    // ─── Dynamic UI Rules Engine ───
+    public DbSet<ServiceAxis.Domain.Entities.Forms.UiPolicy> UiPolicies => Set<ServiceAxis.Domain.Entities.Forms.UiPolicy>();
+    public DbSet<ServiceAxis.Domain.Entities.Forms.UiPolicyCondition> UiPolicyConditions => Set<ServiceAxis.Domain.Entities.Forms.UiPolicyCondition>();
+    public DbSet<ServiceAxis.Domain.Entities.Forms.UiPolicyAction> UiPolicyActions => Set<ServiceAxis.Domain.Entities.Forms.UiPolicyAction>();
+    public DbSet<ServiceAxis.Domain.Entities.Forms.FieldRule> FieldRules => Set<ServiceAxis.Domain.Entities.Forms.FieldRule>();
+    public DbSet<ServiceAxis.Domain.Entities.Forms.ClientScript> ClientScripts => Set<ServiceAxis.Domain.Entities.Forms.ClientScript>();
+
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -368,8 +375,20 @@ public class ServiceAxisDbContext : IdentityDbContext<IdentityUser, IdentityRole
         // Fix multiple cascade paths (SQL Server error 1785)
         foreach (var relationship in builder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))
         {
-            // Keep Cascade for ownership relationships
             if (relationship.DeclaringEntityType.ClrType == typeof(RecordValue) && relationship.PrincipalEntityType.ClrType == typeof(PlatformRecord))
+                continue;
+
+            // Automation/UI Rule Ownership paths
+            if (relationship.DeclaringEntityType.ClrType == typeof(AutomationTrigger) && relationship.PrincipalEntityType.ClrType == typeof(AutomationRule))
+                continue;
+            if (relationship.DeclaringEntityType.ClrType == typeof(AutomationCondition) && relationship.PrincipalEntityType.ClrType == typeof(AutomationRule))
+                continue;
+            if (relationship.DeclaringEntityType.ClrType == typeof(AutomationAction) && relationship.PrincipalEntityType.ClrType == typeof(AutomationRule))
+                continue;
+
+            if (relationship.DeclaringEntityType.ClrType == typeof(ServiceAxis.Domain.Entities.Forms.UiPolicyCondition) && relationship.PrincipalEntityType.ClrType == typeof(ServiceAxis.Domain.Entities.Forms.UiPolicy))
+                continue;
+            if (relationship.DeclaringEntityType.ClrType == typeof(ServiceAxis.Domain.Entities.Forms.UiPolicyAction) && relationship.PrincipalEntityType.ClrType == typeof(ServiceAxis.Domain.Entities.Forms.UiPolicy))
                 continue;
 
             if (relationship.DeclaringEntityType.ClrType == typeof(SysChoice) && relationship.PrincipalEntityType.ClrType == typeof(SysField))
